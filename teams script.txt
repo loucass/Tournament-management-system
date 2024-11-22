@@ -1,0 +1,145 @@
+
+    <script>
+    // Sample data
+    const teams = [{
+            id: 1,
+            name: "Cyber Ninjas",
+            points: 150,
+            members: ["Alice", "Bob", "Charlie"]
+        },
+        {
+            id: 2,
+            name: "Binary Bandits",
+            points: 120,
+            members: ["David", "Eve", "Frank"]
+        },
+        {
+            id: 3,
+            name: "Code Crusaders",
+            points: 180,
+            members: ["Grace", "Henry", "Ivy"]
+        },
+        {
+            id: 4,
+            name: "Data Dragons",
+            points: 90,
+            members: ["Jack", "Kate", "Liam"]
+        },
+        {
+            id: 5,
+            name: "Quantum Questers",
+            points: 85,
+            members: ["Mike", "Nina", "Oscar"]
+        },
+        {
+            id: 6,
+            name: "Algo Avengers",
+            points: 75,
+            members: ["Paul", "Quinn", "Rachel"]
+        },
+        {
+            id: 7,
+            name: "Tech Titans",
+            points: 70,
+            members: ["Sam", "Tina", "Uma"]
+        },
+        {
+            id: 8,
+            name: "Pixel Pirates",
+            points: 65,
+            members: ["Victor", "Wendy", "Xander"]
+        },
+    ];
+
+    console.log(JSON.parse('<?= $competitionsDetails ?>'))
+
+    const goldenSquare = document.getElementById('goldenSquare');
+    const teamTable = document.getElementById('teamTable').getElementsByTagName('tbody')[0];
+    const pointsModal = document.getElementById('pointsModal');
+    const emailModal = document.getElementById('emailModal');
+    let currentTeam;
+
+    function renderTeams() {
+        // Sort teams by points and assign ranks
+        teams.sort((a, b) => b.points - a.points);
+        teams.forEach((team, index) => team.rank = index + 1);
+
+        // Render top 4 teams in golden square
+        goldenSquare.innerHTML = '';
+        teams.slice(0, 4).forEach(team => {
+            const teamCard = document.createElement('div');
+            teamCard.className = 'team-card';
+            teamCard.innerHTML = `
+                    <h2 class="team-name">${team.name}</h2>
+                    <div class="team-rank rank-${team.rank}">#${team.rank}</div>
+                    <div class="team-points">${team.points} points</div>
+                    <div class="team-members">${team.members.join(', ')}</div>
+                    <div class="options">
+                        <button class="btn" onclick="openPointsModal(${team.id})">Update Points</button>
+                        <button class="btn" onclick="openEmailModal(${team.id})">Send Email</button>
+                    </div>
+                `;
+            goldenSquare.appendChild(teamCard);
+        });
+
+        // Render remaining teams in table
+        teamTable.innerHTML = '';
+        teams.slice(4).forEach(team => {
+            const row = teamTable.insertRow();
+            row.innerHTML = `
+                    <td class="rank-cell" style="color: hsl(${120 - (team.rank - 4) * 15}, 100%, 50%);">#${team.rank}</td>
+                    <td>${team.name}</td>
+                    <td>${team.points}</td>
+                    <td>${team.members.join(', ')}</td>
+                    <td>
+                        <button class="btn" onclick="openPointsModal(${team.id})">Update Points</button>
+                        <button class="btn" onclick="openEmailModal(${team.id})">Send Email</button>
+                    </td>
+                `;
+        });
+    }
+
+    function openPointsModal(teamId) {
+        currentTeam = teams.find(team => team.id === teamId);
+        pointsModal.style.display = 'block';
+        document.getElementById('pointsInput').value = currentTeam.points;
+    }
+
+    function openEmailModal(teamId) {
+        currentTeam = teams.find(team => team.id === teamId);
+        emailModal.style.display = 'block';
+    }
+
+    function updatePoints() {
+        const newPoints = parseInt(document.getElementById('pointsInput').value);
+        if (!isNaN(newPoints)) {
+            currentTeam.points = newPoints;
+            renderTeams();
+            pointsModal.style.display = 'none';
+        }
+    }
+
+    function sendEmail() {
+        const subject = document.getElementById('emailSubject').value;
+        const message = document.getElementById('emailMessage').value;
+        alert(`Email sent to ${currentTeam.name}!\nSubject: ${subject}\nMessage: ${message}`);
+        emailModal.style.display = 'none';
+    }
+
+    // Close modals when clicking on the close button or outside the modal
+    window.onclick = function(event) {
+        if (event.target == pointsModal || event.target == emailModal) {
+            pointsModal.style.display = 'none';
+            emailModal.style.display = 'none';
+        }
+    }
+
+    document.querySelectorAll('.close').forEach(closeBtn => {
+        closeBtn.onclick = function() {
+            pointsModal.style.display = 'none';
+            emailModal.style.display = 'none';
+        }
+    });
+
+    renderTeams();
+    </script>
