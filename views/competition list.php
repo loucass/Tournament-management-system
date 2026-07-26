@@ -148,7 +148,8 @@
 
     renderCompetitions();
     <?php
-    if($_COOKIE["role"] != "teachers"):
+    $role = $_COOKIE["role"] ?? '';
+    if($role != "admin"):
     ?>
     const NONcompetitions = JSON.parse('<?= $NONcompetitions ?>')
 

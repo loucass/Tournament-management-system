@@ -216,7 +216,7 @@
                 </div>
                 <button type="submit">add user</button>
                 <a href="/home">back</a>
-                <div class="error"><?= $errorM ?></div>
+                <div class="error"><?= htmlspecialchars($errorM ?? '', ENT_QUOTES, 'UTF-8') ?></div>
                 <div class="decorative-line"></div>
             </form>
         </div>

@@ -212,7 +212,7 @@
         <!-- <div class="forgot-password">
             <a href="#">Forgot password?</a>
         </div> -->
-        <div class="error"><?= $errorM ?? $errorM ?></div>
+        <div class="error"><?= htmlspecialchars($errorM ?? '', ENT_QUOTES, 'UTF-8') ?></div>
         <div class="decorative-line"></div>
     </div>
 

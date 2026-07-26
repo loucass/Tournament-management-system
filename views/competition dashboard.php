@@ -235,7 +235,7 @@
 
 <body>
     <header>
-        <h1><?= $_GET["competition"] ?></h1> <span>(<?= $_GET["category"] ?>)</span>
+        <h1><?= htmlspecialchars($_GET["competition"] ?? '', ENT_QUOTES, 'UTF-8') ?></h1> <span>(<?= htmlspecialchars($_GET["category"] ?? '', ENT_QUOTES, 'UTF-8') ?>)</span>
     </header>
     <main>
         <div id="goldenSquare" class="golden-square">
@@ -340,7 +340,7 @@
 
         const xhr = new XMLHttpRequest();
 
-        xhr.open('POST', 'http://127.0.1.1:8080/editPoints');
+        xhr.open('POST', '/editPoints');
 
         xhr.onreadystatechange = function() {
             if (xhr.readyState === 4 && xhr.status === 200) {
@@ -357,10 +357,8 @@
         currentTeam = teams.find(team => team.ID == teamId);
         pointsModal.style.display = 'block';
         pointsModalForm.innerHTML += `<input hidden type="text" name="ID" value="${currentTeam.ID}" />`
-        pointsModalForm.innerHTML += `<input hidden type="text" name="participantName" value="${currentTeam.name}" />`
-        pointsModalForm.innerHTML += `<input hidden type="text" name="category" value="<?= $_GET["category"] ?>" />`
-        pointsModalForm.innerHTML +=
-            `<input hidden type="text" name="competitionName" value="<?= $_GET["competition"] ?>" />`
+        pointsModalForm.innerHTML += `<input hidden type="text" name="participantName" value="${currentTeam.name}" />`        pointsModalForm.innerHTML += `<input hidden type="text" name="category" value="<?= htmlspecialchars($_GET["category"] ?? '', ENT_QUOTES, 'UTF-8') ?>" />`
+        pointsModalForm.innerHTML += `<input hidden type="text" name="competitionName" value="<?= htmlspecialchars($_GET["competition"] ?? '', ENT_QUOTES, 'UTF-8') ?>" />`
         document.getElementById('pointsInput').value = currentTeam.points;
     }
 
