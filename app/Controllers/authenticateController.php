@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\App;
+use App\Services\Database;
 
 class authenticateController
 {
-
-    private static \PDO $db;
 
     public static function verify(bool $teacher = false)
     {
@@ -26,10 +25,8 @@ class authenticateController
             return false;
         }
 
-        static::$db = App::db();
-
         // Find token in database
-        $st = static::$db->prepare("SELECT * FROM tokens WHERE token = ? AND role = ?");
+        $st = Database::connect()->prepare("SELECT * FROM tokens WHERE token = ? AND role = ?");
         $st->execute([$token, $role]);
         $result = $st->fetch();
 
@@ -46,11 +43,11 @@ class authenticateController
 
         // Fetch user from appropriate table
         if ($role === 'teams') {
-            $st = static::$db->prepare("SELECT * FROM teams WHERE ID = ?");
+            $st = Database::connect()->prepare("SELECT * FROM teams WHERE ID = ?");
             $st->execute([$userID]);
             $user = $st->fetch();
         } else {
-            $st = static::$db->prepare("SELECT * FROM users WHERE ID = ?");
+            $st = Database::connect()->prepare("SELECT * FROM users WHERE ID = ?");
             $st->execute([$userID]);
             $user = $st->fetch();
         }

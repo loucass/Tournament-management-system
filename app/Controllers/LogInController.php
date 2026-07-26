@@ -5,19 +5,17 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\App;
+use App\Services\Database;
 use App\Controllers\authenticateController;
 use App\View;
 
 class LogInController
 {
 
-    private static \PDO $db;
-
     public function login(): void
     {
         try {
-            static::$db = App::db();
-            static::$db->beginTransaction();
+            Database::connect()->beginTransaction();
 
             $email = strtolower(trim($_POST["userEmail"] ?? ''));
             $password = $_POST["password"] ?? '';
@@ -27,7 +25,7 @@ class LogInController
             $user = null;
 
             // Try teams table
-            $st = static::$db->prepare("SELECT * FROM teams WHERE email = ?");
+            $st = Database::connect()->prepare("SELECT * FROM teams WHERE email = ?");
             $st->execute([$email]);
             $user = $st->fetch();
 
@@ -35,7 +33,7 @@ class LogInController
                 $userRole = 'teams';
             } else {
                 // Try users table (admin or student)
-                $st = static::$db->prepare("SELECT * FROM users WHERE email = ?");
+                $st = Database::connect()->prepare("SELECT * FROM users WHERE email = ?");
                 $st->execute([$email]);
                 $user = $st->fetch();
 
@@ -52,16 +50,16 @@ class LogInController
             $ID = $user["ID"];
 
             // Check existing token
-            $st = static::$db->prepare("SELECT * FROM tokens WHERE role = ? AND userID = ?");
+            $st = Database::connect()->prepare("SELECT * FROM tokens WHERE role = ? AND userID = ?");
             $st->execute([$userRole, $ID]);
             $existingToken = $st->fetch();
 
             if (!$existingToken) {
                 $token = authenticateController::create();
-                $st = static::$db->prepare("INSERT INTO tokens VALUES(NULL, ?, ?, ?)");
+                $st = Database::connect()->prepare("INSERT INTO tokens VALUES(NULL, ?, ?, ?)");
                 $st->execute([$token, $userRole, $ID]);
             } else {
-                $st = static::$db->prepare("UPDATE tokens SET token = ? WHERE role = ? AND userID = ?");
+                $st = Database::connect()->prepare("UPDATE tokens SET token = ? WHERE role = ? AND userID = ?");
                 $st->execute([authenticateController::refresh(), $userRole, $ID]);
             }
 
@@ -70,12 +68,12 @@ class LogInController
             // Regenerate session ID to prevent session fixation attacks
             session_regenerate_id(true);
 
-            static::$db->commit();
+            Database::connect()->commit();
             header("Location: /home");
             exit();
 
         } catch (\Exception $r) {
-            static::$db->rollBack();
+            Database::connect()->rollBack();
             echo View::make("log in", ["errorM" => "login failed. please try again."]);
             return;
         }

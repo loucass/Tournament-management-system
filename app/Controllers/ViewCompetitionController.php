@@ -4,75 +4,115 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\App;
-use App\Controllers\authenticateController;
+use App\Paginator;
+use App\Services\Database;
 use App\View;
 
 class ViewCompetitionController
 {
+    private const PER_PAGE = 10;
 
-    private static \PDO $db;
-
-    public function insert()
+    public function insert(): void
     {
         try {
             if (!authenticateController::verify(false)) {
                 header("Location: /logIn");
                 exit();
             }
-            static::$db = App::db();
 
-            $role = $_SESSION["USER"]["role"] ?? '';
+            $role       = $_SESSION["USER"]["role"] ?? '';
+            $currentPage = max(1, (int) ($_GET['page'] ?? 1));
+            $offset     = ($currentPage - 1) * self::PER_PAGE;
 
             if ($role !== "admin") {
-                // Non-teacher: show competitions they've joined and available ones
-                $q1 = "SELECT c.name, c.category, cp.participantName AS winner FROM competitions c ";
-                $q2 = "INNER JOIN competitions_applications ca ON ca.competitionID = c.ID ";
-                $q3 = "LEFT JOIN competitions_points cp ON cp.competitionID = c.ID ";
-                $q4 = "WHERE ca.participantID = ? ";
-                $q5 = "GROUP BY c.ID, c.name, c.category";
+                // ── Non-admin: joined competitions ──────────────────────
+                $countSt = Database::connect()->prepare(<<<SQL
+                    SELECT COUNT(DISTINCT c.ID) AS total
+                       FROM competitions c
+                       INNER JOIN competitions_applications ca ON ca.competitionID = c.ID
+                       LEFT JOIN competitions_points cp ON cp.competitionID = c.ID
+                       WHERE ca.participantID = ?
+                    SQL
+                );
+                $countSt->execute([$_SESSION["USER"]["ID"]]);
+                $total = (int) $countSt->fetch()['total'];
 
-                $query = $q1 . $q2 . $q3 . $q4 . $q5;
+                $st = Database::connect()->prepare(<<<SQL
+                    SELECT c.name, c.category, cp.participantName AS winner
+                       FROM competitions c
+                       INNER JOIN competitions_applications ca ON ca.competitionID = c.ID
+                       LEFT JOIN competitions_points cp ON cp.competitionID = c.ID
+                       WHERE ca.participantID = ?
+                       GROUP BY c.ID, c.name, c.category
+                       ORDER BY c.name
+                       LIMIT ? OFFSET ?
+                    SQL
+                );
+                $st->execute([$_SESSION["USER"]["ID"], self::PER_PAGE, $offset]);
+                $joinedPaginator = new Paginator($st->fetchAll(), $total, $currentPage, self::PER_PAGE);
 
-                $st = static::$db->prepare($query);
-                $st->execute([$_SESSION["USER"]["ID"]]);
-                $competitions = json_encode($st->fetchAll());
+                // ── Non-admin: available competitions ────────────────────
+                $availCountSt = Database::connect()->prepare(<<<SQL
+                    SELECT COUNT(DISTINCT c.ID) AS total
+                       FROM competitions c
+                       LEFT JOIN competitions_applications ca
+                         ON ca.competitionID = c.ID AND ca.participantID = ? AND ca.category = ?
+                       WHERE ca.participantID IS NULL
+                    SQL
+                );
+                $availCountSt->execute([$_SESSION["USER"]["ID"], $role]);
+                $availTotal = (int) $availCountSt->fetch()['total'];
 
-                // Competitions not yet joined
-                $q1 = "SELECT c.name, c.category, cp.participantName AS winner FROM competitions c ";
-                $q2 = "LEFT JOIN competitions_applications ca ON ca.competitionID = c.ID AND ca.participantID = ? AND ca.category = ? ";
-                $q3 = "LEFT JOIN competitions_points cp ON cp.competitionID = c.ID ";
-                $q4 = "WHERE ca.participantID IS NULL ";
-                $q5 = "GROUP BY c.ID, c.name, c.category";
-
-                $query = $q1 . $q2 . $q3 . $q4 . $q5;
-
-                $st = static::$db->prepare($query);
-                $st->execute([$_SESSION["USER"]["ID"], $role]);
-                $NONcompetitions = json_encode($st->fetchAll());
+                $st = Database::connect()->prepare(<<<SQL
+                    SELECT c.name, c.category, cp.participantName AS winner
+                       FROM competitions c
+                       LEFT JOIN competitions_applications ca
+                         ON ca.competitionID = c.ID AND ca.participantID = ? AND ca.category = ?
+                       LEFT JOIN competitions_points cp ON cp.competitionID = c.ID
+                       WHERE ca.participantID IS NULL
+                       GROUP BY c.ID, c.name, c.category
+                       ORDER BY c.name
+                       LIMIT ? OFFSET ?
+                    SQL
+                );
+                $st->execute([$_SESSION["USER"]["ID"], $role, self::PER_PAGE, $offset]);
+                $availPaginator = new Paginator($st->fetchAll(), $availTotal, $currentPage, self::PER_PAGE);
 
                 echo View::make("competition list", [
-                    "errorM" => null,
-                    "competitions" => $competitions,
-                    "NONcompetitions" => $NONcompetitions,
+                    "errorM"             => null,
+                    "competitions"       => json_encode($joinedPaginator->items),
+                    "NONcompetitions"    => json_encode($availPaginator->items),
+                    "pagination"         => json_encode($joinedPaginator->toArray()),
+                    "availPagination"    => json_encode($availPaginator->toArray()),
                 ]);
                 return;
             }
 
-            // Admin view: all competitions with winners
-            $q1 = "SELECT c.name, c.category, cp.participantName AS winner, COALESCE(MAX(cp.points), 0) AS max_points FROM competitions c ";
-            $q2 = "LEFT JOIN competitions_points cp ON cp.competitionID = c.ID ";
-            $q3 = "GROUP BY c.ID, c.name, c.category";
+            // ── Admin: all competitions ──────────────────────────────────
+            $countSt = Database::connect()->query(
+                "SELECT COUNT(*) AS total FROM (SELECT c.ID FROM competitions c GROUP BY c.ID) sub"
+            );
+            $total = (int) $countSt->fetch()['total'];
 
-            $query = $q1 . $q2 . $q3;
-
-            $st = static::$db->query($query);
-            $competitions = json_encode($st->fetchAll());
+            $st = Database::connect()->prepare(<<<SQL
+                SELECT c.name, c.category, cp.participantName AS winner,
+                        COALESCE(MAX(cp.points), 0) AS max_points
+                   FROM competitions c
+                   LEFT JOIN competitions_points cp ON cp.competitionID = c.ID
+                   GROUP BY c.ID, c.name, c.category
+                   ORDER BY c.name
+                   LIMIT ? OFFSET ?
+                SQL
+            );
+            $st->execute([self::PER_PAGE, $offset]);
+            $paginator = new Paginator($st->fetchAll(), $total, $currentPage, self::PER_PAGE);
 
             echo View::make("competition list", [
-                "errorM" => null,
-                "competitions" => $competitions,
+                "errorM"       => null,
+                "competitions" => json_encode($paginator->items),
+                "pagination"   => json_encode($paginator->toArray()),
             ]);
+
         } catch (\Exception $r) {
             echo View::make("competition list", ["errorM" => "failed to load competitions."]);
         }

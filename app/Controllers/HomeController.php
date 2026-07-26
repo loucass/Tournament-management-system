@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\{App, View};
+use App\View;
+use App\Services\Database;
 use App\Exceptions\{AuthenticationFailedException, RouteNotFoundException};
 
 class HomeController
@@ -25,16 +26,16 @@ class HomeController
 
             if ($isAdmin) {
                 // Admin view: fetch all students, teams, and team members
-                $st = App::db()->prepare("SELECT u.name, u.ID FROM users u WHERE u.role = 'student' ORDER BY u.name");
+                $st = Database::connect()->prepare("SELECT u.name, u.ID FROM users u WHERE u.role = 'student' ORDER BY u.name");
                 $st->execute();
                 $participants = $st->fetchAll();
 
-                $st = App::db()->prepare("SELECT t.ID, t.name FROM teams t ORDER BY t.name");
+                $st = Database::connect()->prepare("SELECT t.ID, t.name FROM teams t ORDER BY t.name");
                 $st->execute();
                 $teams = $st->fetchAll();
 
                 // Get team members (students who have a teamID set)
-                $st = App::db()->prepare("SELECT u.ID, u.name, u.teamID FROM users u WHERE u.teamID IS NOT NULL ORDER BY u.name");
+                $st = Database::connect()->prepare("SELECT u.ID, u.name, u.teamID FROM users u WHERE u.teamID IS NOT NULL ORDER BY u.name");
                 $st->execute();
                 $teamMembers = $st->fetchAll();
 

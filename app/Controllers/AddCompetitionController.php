@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\App;
+use App\Services\Database;
 use App\Controllers\authenticateController ;
 use App\View;
 
 class AddCompetitionController
 {
-
-    private static \PDO $db;
 
     public function add(): void
     {
@@ -20,12 +18,12 @@ class AddCompetitionController
                 header("Location: /logIn");
                 exit();
             }
-            static::$db = App::db();
+            Database::connect();
 
             $competitionName = strtolower(trim($_POST["competitionName"] ?? ''));
             $competitionCategory = strtolower(trim($_POST["competitionCategory"] ?? ''));
 
-            $st = static::$db->prepare("SELECT * FROM competitions WHERE name = ?");
+            $st = Database::connect()->prepare("SELECT * FROM competitions WHERE name = ?");
             $st->execute([$competitionName]);
             
             if($st->fetch()){
@@ -33,7 +31,7 @@ class AddCompetitionController
                 return;
             }
             
-            $st = static::$db->prepare("INSERT INTO competitions (name, category) VALUES(?, ?)");
+            $st = Database::connect()->prepare("INSERT INTO competitions (name, category) VALUES(?, ?)");
             $st->execute([$competitionName, $competitionCategory]);
 
             header("Location: /home");

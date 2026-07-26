@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\App;
+use App\Services\Database;
 use App\Controllers\authenticateController;
 use App\View;
 
 class AddTeamController
 {
-
-    private static \PDO $db;
 
     public function add(): void
     {
@@ -20,16 +18,14 @@ class AddTeamController
                 header("Location: /logIn");
                 exit();
             }
-            static::$db = App::db();
-
-            static::$db->beginTransaction();
+            Database::connect()->beginTransaction();
 
             $teamName = strtolower(trim($_POST["userName"] ?? ''));
             $teamEmail = strtolower(trim($_POST["userEmail"] ?? ''));
             $password = $_POST["password"] ?? '';
 
             // Check for duplicate team email
-            $st = static::$db->prepare("SELECT * FROM teams WHERE email = ?");
+            $st = Database::connect()->prepare("SELECT * FROM teams WHERE email = ?");
             $st->execute([$teamEmail]);
             if ($st->fetch()) {
                 echo View::make("add team", ["errorM" => "team with this email already exists", "students" => null]);
@@ -40,9 +36,9 @@ class AddTeamController
             $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
 
             // Create the team
-            $st = static::$db->prepare("INSERT INTO teams (name, email, password) VALUES (?, ?, ?)");
+            $st = Database::connect()->prepare("INSERT INTO teams (name, email, password) VALUES (?, ?, ?)");
             $st->execute([$teamName, $teamEmail, $hashedPassword]);
-            $teamID = static::$db->lastInsertId();
+            $teamID = Database::connect()->lastInsertId();
 
             // Assign selected students to the team with a single bulk query
             $studentNames = $_POST["students"] ?? [];
@@ -56,23 +52,23 @@ class AddTeamController
             if (count($studentNames) > 0) {
                 // Use bulk SELECT with FOR UPDATE for all students at once (prevents N+1 race conditions)
                 $placeholders = implode(',', array_fill(0, count($studentNames), '?'));
-                $st = static::$db->prepare("SELECT ID, name FROM users WHERE name IN ($placeholders) AND role = 'student' AND teamID IS NULL FOR UPDATE");
+                $st = Database::connect()->prepare("SELECT ID, name FROM users WHERE name IN ($placeholders) AND role = 'student' AND teamID IS NULL FOR UPDATE");
                 $st->execute(array_values($studentNames));
                 $availableStudents = $st->fetchAll();
 
                 // Assign all available students to the team
                 foreach ($availableStudents as $student) {
-                    $st = static::$db->prepare("UPDATE users SET teamID = ? WHERE ID = ?");
+                    $st = Database::connect()->prepare("UPDATE users SET teamID = ? WHERE ID = ?");
                     $st->execute([$teamID, $student["ID"]]);
                 }
             }
 
-            static::$db->commit();
+            Database::connect()->commit();
             header("Location: /home");
             exit();
 
         } catch (\Exception $r) {
-            static::$db->rollBack();
+            Database::connect()->rollBack();
             echo View::make("add team", ["errorM" => "failed to create team. please try again.", "students" => null]);
             return;
         }

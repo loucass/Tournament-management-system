@@ -4,57 +4,90 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\App;
+use App\Paginator;
+use App\Services\Database;
 use App\Controllers\authenticateController;
 use App\View;
 
 class ViewCompetitionDetailsController
 {
+    private const PER_PAGE = 10;
 
-    private static \PDO $db;
-
-    public function insert()
+    public function insert(): View
     {
         try {
             if (!authenticateController::verify(true)) {
                 header("Location: /logIn");
                 exit();
             }
-            static::$db = App::db();
 
             $competitionName = strtolower(trim($_GET["competition"] ?? ''));
-            $category = strtolower(trim($_GET["category"] ?? ''));
+            $category        = strtolower(trim($_GET["category"] ?? ''));
+            $currentPage     = max(1, (int) ($_GET['page'] ?? 1));
+            $offset          = ($currentPage - 1) * self::PER_PAGE;
 
-            if (!in_array($category, ['individuals', 'teams'])) {
+            if (!in_array($category, ['individuals', 'teams'], true)) {
                 return View::make("404", ["errorPath" => "invalid category"]);
             }
 
             if ($category === "individuals") {
-                $q1 = "SELECT c.name, c.category, u.name AS participant_name, u.ID, COALESCE(cp.points, 0) AS points FROM competitions c ";
-                $q2 = "LEFT JOIN competitions_applications ca ON ca.competitionID = c.ID ";
-                $q3 = "INNER JOIN users u ON ca.participantID = u.ID ";
-                $q4 = "LEFT JOIN competitions_points cp ON cp.competitionID = c.ID AND cp.participantID = u.ID ";
-                $q5 = "WHERE c.name = ? AND c.category = ? ";
-                $q6 = "ORDER BY cp.points DESC";
+                $countQuery = <<<SQL
+                    SELECT COUNT(*) AS total
+                        FROM competitions c
+                        LEFT JOIN competitions_applications ca ON ca.competitionID = c.ID
+                        INNER JOIN users u ON ca.participantID = u.ID
+                        WHERE c.name = ? AND c.category = ?
+                    SQL;
+
+                $dataQuery = <<<SQL
+                    SELECT c.name, c.category, u.name AS participant_name, u.ID,
+                             COALESCE(cp.points, 0) AS points
+                        FROM competitions c
+                        LEFT JOIN competitions_applications ca ON ca.competitionID = c.ID
+                        INNER JOIN users u ON ca.participantID = u.ID
+                        LEFT JOIN competitions_points cp
+                          ON cp.competitionID = c.ID AND cp.participantID = u.ID
+                        WHERE c.name = ? AND c.category = ?
+                        ORDER BY cp.points DESC
+                        LIMIT ? OFFSET ?
+                    SQL;
             } else {
-                $q1 = "SELECT c.name, c.category, t.name AS participant_name, t.ID, COALESCE(cp.points, 0) AS points FROM competitions c ";
-                $q2 = "LEFT JOIN competitions_applications ca ON ca.competitionID = c.ID ";
-                $q3 = "LEFT JOIN teams t ON ca.participantID = t.ID ";
-                $q4 = "LEFT JOIN competitions_points cp ON cp.competitionID = c.ID AND cp.participantID = t.ID ";
-                $q5 = "WHERE c.name = ? AND c.category = ? ";
-                $q6 = "ORDER BY cp.points DESC";
+                $countQuery = <<<SQL
+                    SELECT COUNT(*) AS total
+                        FROM competitions c
+                        LEFT JOIN competitions_applications ca ON ca.competitionID = c.ID
+                        LEFT JOIN teams t ON ca.participantID = t.ID
+                        WHERE c.name = ? AND c.category = ?
+                    SQL;
+
+                $dataQuery = <<<SQL
+                    SELECT c.name, c.category, t.name AS participant_name, t.ID,
+                             COALESCE(cp.points, 0) AS points
+                        FROM competitions c
+                        LEFT JOIN competitions_applications ca ON ca.competitionID = c.ID
+                        LEFT JOIN teams t ON ca.participantID = t.ID
+                        LEFT JOIN competitions_points cp
+                          ON cp.competitionID = c.ID AND cp.participantID = t.ID
+                        WHERE c.name = ? AND c.category = ?
+                        ORDER BY cp.points DESC
+                        LIMIT ? OFFSET ?
+                    SQL;
             }
 
-            $query = $q1 . $q2 . $q3 . $q4 . $q5 . $q6;
+            // Total for pagination
+            $countSt = Database::connect()->prepare($countQuery);
+            $countSt->execute([$competitionName, $category]);
+            $total = (int) $countSt->fetch()['total'];
 
-            $st = static::$db->prepare($query);
-            $st->execute([$competitionName, $category]);
-
-            $competitionsDetails = json_encode($st->fetchAll());
+            // Data for current page
+            $st = Database::connect()->prepare($dataQuery);
+            $st->execute([$competitionName, $category, self::PER_PAGE, $offset]);
+            $paginator = new Paginator($st->fetchAll(), $total, $currentPage, self::PER_PAGE);
 
             return View::make("competition dashboard", [
-                "errorM" => null,
-                "competitionsDetails" => $competitionsDetails,
+                "errorM"             => null,
+                "competitionsDetails" => json_encode($paginator->items),
+                "pagination"         => json_encode($paginator->toArray()),
             ]);
 
         } catch (\Exception $r) {

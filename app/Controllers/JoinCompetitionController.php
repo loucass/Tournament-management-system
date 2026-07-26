@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\App;
+use App\Services\Database;
 use App\Controllers\authenticateController;
 use App\View;
 
 class JoinCompetitionController
 {
-
-    private static \PDO $db;
 
     public function join(): void
     {
@@ -20,9 +18,7 @@ class JoinCompetitionController
                 header("Location: /logIn");
                 exit();
             }
-            static::$db = App::db();
-
-            static::$db->beginTransaction();
+            Database::connect()->beginTransaction();
 
             $competitions = $_POST["competitions"] ?? [];
             if (!is_array($competitions)) {
@@ -36,7 +32,7 @@ class JoinCompetitionController
                 $role = $_SESSION["USER"]["role"];
 
                 // Check if already applied
-                $st = static::$db->prepare("SELECT * FROM competitions_applications WHERE competitionName = ? AND participantID = ?");
+                $st = Database::connect()->prepare("SELECT * FROM competitions_applications WHERE competitionName = ? AND participantID = ?");
                 $st->execute([$competitionName, $participantID]);
                 if ($st->fetch()) {
                     echo View::make("join competition", ["errorM" => "already applied to this competition", "competitions" => null]);
@@ -44,7 +40,7 @@ class JoinCompetitionController
                 }
 
                 // Check capacity limits
-                $st = static::$db->prepare("SELECT COUNT(*) as total FROM competitions_applications WHERE competitionName = ?");
+                $st = Database::connect()->prepare("SELECT COUNT(*) as total FROM competitions_applications WHERE competitionName = ?");
                 $st->execute([$competitionName]);
                 $totalApplications = $st->fetch()["total"];
 
@@ -55,7 +51,7 @@ class JoinCompetitionController
                 }
 
                 // Get competition ID
-                $st = static::$db->prepare("SELECT ID FROM competitions WHERE name = ?");
+                $st = Database::connect()->prepare("SELECT ID FROM competitions WHERE name = ?");
                 $st->execute([$competitionName]);
                 $compRow = $st->fetch();
                 if (!$compRow) {
@@ -65,16 +61,16 @@ class JoinCompetitionController
                 $CompetitionID = $compRow["ID"];
 
                 // Insert application
-                $st = static::$db->prepare("INSERT INTO competitions_applications VALUES(NULL, ?, ?, ?, ?)");
+                $st = Database::connect()->prepare("INSERT INTO competitions_applications VALUES(NULL, ?, ?, ?, ?)");
                 $st->execute([$participantID, $CompetitionID, $competitionName, $role]);
             }
 
-            static::$db->commit();
+            Database::connect()->commit();
             header("Location: /home");
             exit();
 
         } catch (\Exception $r) {
-            static::$db->rollBack();
+            Database::connect()->rollBack();
             echo View::make("join competition", ["errorM" => "failed to join competition. please try again.", "competitions" => null]);
             return;
         }
@@ -86,11 +82,10 @@ class JoinCompetitionController
             header("Location: /logIn");
             exit();
         }
-        static::$db = App::db();
         $role = $_SESSION["USER"]["role"] ?? '';
 
         // Get available competitions for this user's category
-        $st = static::$db->prepare("SELECT name FROM competitions WHERE category = ?");
+        $st = Database::connect()->prepare("SELECT name FROM competitions WHERE category = ?");
         $st->execute([$role === 'teams' ? 'teams' : 'individuals']);
         $res = $st->fetchAll();
         $competitions = json_encode(array_map(fn($r) => $r['name'], $res));

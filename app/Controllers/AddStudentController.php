@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\App;
+use App\Services\Database;
 use App\Controllers\authenticateController;
 use App\View;
 
 class AddStudentController
 {
-
-    private static \PDO $db;
 
     public function add(): void
     {
@@ -20,16 +18,14 @@ class AddStudentController
                 header("Location: /logIn");
                 exit();
             }
-            static::$db = App::db();
-
-            static::$db->beginTransaction();
+            Database::connect()->beginTransaction();
 
             $name = strtolower(trim($_POST["userName"] ?? ''));
             $email = strtolower(trim($_POST["userEmail"] ?? ''));
             $password = $_POST["password"] ?? '';
 
             // Check for duplicate email
-            $st = static::$db->prepare("SELECT * FROM users WHERE email = ?");
+            $st = Database::connect()->prepare("SELECT * FROM users WHERE email = ?");
             $st->execute([$email]);
             $existing = $st->fetch();
 
@@ -42,15 +38,15 @@ class AddStudentController
             $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
 
             // Insert as student (unified users table)
-            $st = static::$db->prepare("INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, 'student')");
+            $st = Database::connect()->prepare("INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, 'student')");
             $st->execute([$name, $email, $hashedPassword]);
 
-            static::$db->commit();
+            Database::connect()->commit();
             header("Location: /home");
             exit();
 
         } catch (\Exception $r) {
-            static::$db->rollBack();
+            Database::connect()->rollBack();
             echo View::make("add student", ["errorM" => "failed to add student. please try again."]);
             return;
         }

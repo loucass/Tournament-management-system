@@ -4,22 +4,19 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\App;
+use App\Services\Database;
 
 class ApplyingPolicyController
 {
-
-    private static \PDO $db;
 
     /**
      * Returns students who can still be added to teams (fewer than 5 competition applications total).
      */
     public static function verifyForTeams()
     {
-        static::$db = App::db();
-
         // Count total competition applications per student (direct + via team)
-        $q = "SELECT u.name, u.ID, 
+        $q = <<<SQL
+            SELECT u.name, u.ID, 
               (COALESCE(direct_apps.cnt, 0) + COALESCE(team_apps.cnt, 0)) AS applications 
               FROM users u
               LEFT JOIN (
@@ -36,9 +33,10 @@ class ApplyingPolicyController
               WHERE u.role = 'student'
               GROUP BY u.ID
               HAVING applications < 5
-              ORDER BY u.name";
+              ORDER BY u.name
+            SQL;
 
-        $st = static::$db->query($q);
+        $st = Database::connect()->query($q);
         $result = $st->fetchAll();
 
         if (count($result) > 0) {
@@ -52,15 +50,14 @@ class ApplyingPolicyController
      */
     public static function verify()
     {
-        static::$db = App::db();
-
         $userID = $_SESSION["USER"]["ID"] ?? null;
         if (!$userID) {
             return false;
         }
 
         // Count applications for this user (direct + via team)
-        $q = "SELECT 
+        $q = <<<SQL
+            SELECT 
               (COALESCE(direct_apps.cnt, 0) + COALESCE(team_apps.cnt, 0)) AS applications
               FROM users u
               LEFT JOIN (
@@ -75,9 +72,10 @@ class ApplyingPolicyController
                 GROUP BY tp.teamID
               ) team_apps ON team_apps.teamID = u.teamID
               WHERE u.ID = ?
-              GROUP BY u.ID";
+              GROUP BY u.ID
+            SQL;
 
-        $st = static::$db->prepare($q);
+        $st = Database::connect()->prepare($q);
         $st->execute([$userID]);
         $result = $st->fetch();
 
