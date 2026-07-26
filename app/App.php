@@ -67,15 +67,4 @@ class App
         }
     }
 
-    public static function convertToArray(array $data , string $field):string
-    {
-        $resultOfArray = "[";
-        foreach($data as $value){
-            $resultOfArray .= " ' " . $value[$field] . " ' ,";
-        }
-        $lengthOfSTR = strlen($resultOfArray)-2;
-        $resultOfArray = substr_replace($resultOfArray , ""  , $lengthOfSTR , 2);
-        $resultOfArray .= "]";
-        return $resultOfArray;
-    }
 }
