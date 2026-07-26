@@ -1,7 +1,5 @@
 <?php
 
-//http://127.0.1.1:8080/
-
 declare(strict_types=1);
 
 namespace App;
@@ -51,7 +49,7 @@ class App
         return static::$db;
     }
 
-    public static function SetCookies(string $name, string|array $value, string $period)
+    public static function setCookies(string $name, string|array $value, string $period)
     {
         setcookie($name, $value, ["expires" => strtotime($period), "secure" => true, "httponly" => true, "samesite" => "none"]);
         return strtotime($period);
