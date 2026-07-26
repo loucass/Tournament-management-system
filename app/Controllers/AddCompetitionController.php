@@ -37,7 +37,6 @@ class AddCompetitionController
             $st->bindValue(1 , strtolower(filter_input(INPUT_POST , "competitionName" , FILTER_SANITIZE_STRING)));
             $st->bindValue(2 , strtolower(filter_input(INPUT_POST , "competitionCategory" , FILTER_SANITIZE_STRING)));
             $st->execute();
-            $res = $st->fetchAll();
 
             static::$db->commit();
             header("Location: /home");

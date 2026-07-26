@@ -93,7 +93,7 @@ class JoinCompetitionController
         $st = static::$db->prepare("SELECT name FROM competitions WHERE category = ?");
         $st->execute([$role === 'teams' ? 'teams' : 'individuals']);
         $res = $st->fetchAll();
-        $competitions = App::convertToArray($res , "name");
+        $competitions = json_encode(array_map(fn($r) => $r['name'], $res));
 
         return View::make("join competition", [
             "errorM" => null,

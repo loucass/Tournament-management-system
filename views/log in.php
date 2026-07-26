@@ -190,15 +190,7 @@
     <div class="login-container">
         <h1>Login</h1>
         <form method="post">
-            <div class="input-container">
-                <select id="user role" name="userRole" required>
-                    <option value="teams">team</option>
-                    <option value="teams_participants">team member</option>
-                    <option value="users">individual</option>
-                    <option value="teachers">teacher</option>
-                </select>
-                <label for="user role">role</label>
-            </div>
+
             <div class="input-container">
                 <input type="email" id="user email" name="userEmail" required placeholder=" ">
                 <label for="user email">user email</label>

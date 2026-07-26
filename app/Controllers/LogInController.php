@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\App;
-use App\Controllers\authenticateController ;
+use App\Controllers\authenticateController;
 use App\View;
 
 class LogInController
@@ -15,71 +15,74 @@ class LogInController
 
     public function login(): void
     {
-        try{
-            // Whitelist allowed roles to prevent SQL injection
-            $allowedRoles = ['teachers', 'users', 'teams', 'teams_participants'];
-            $userRole = $_POST["userRole"] ?? '';
-            if (!in_array($userRole, $allowedRoles)) {
-                echo View::make("log in" , ["errorM" => "invalid role selected"]);
-                return;
-            }
-
+        try {
             static::$db = App::db();
-            
             static::$db->beginTransaction();
-            
-            $st = static::$db->prepare('SELECT * FROM ' . $userRole . " WHERE email = ? AND password = ?");
-            $st->bindValue(1 , strtolower(filter_input(INPUT_POST , "userEmail" , FILTER_VALIDATE_EMAIL)));
-            $st->bindValue(2 ,hash("sha256" , filter_input(INPUT_POST , "password" , FILTER_SANITIZE_STRING)));
-            $st->execute();
-            $res = $st->fetchAll();
-            
-            if(count($res) == 0){
-                echo View::make("log in" , ["errorM" => "no such user"]);
+
+            $email = strtolower(trim($_POST["userEmail"] ?? ''));
+            $password = $_POST["password"] ?? '';
+
+            // Auto-detect role: check teams table first, then users table
+            $userRole = '';
+            $user = null;
+
+            // Try teams table
+            $st = static::$db->prepare("SELECT * FROM teams WHERE email = ?");
+            $st->execute([$email]);
+            $user = $st->fetch();
+
+            if ($user && password_verify($password, $user["password"])) {
+                $userRole = 'teams';
+            } else {
+                // Try users table (admin or student)
+                $st = static::$db->prepare("SELECT * FROM users WHERE email = ?");
+                $st->execute([$email]);
+                $user = $st->fetch();
+
+                if ($user && password_verify($password, $user["password"])) {
+                    $userRole = $user["role"]; // 'admin' or 'student'
+                }
+            }
+
+            if (!$user || !$userRole) {
+                echo View::make("log in", ["errorM" => "invalid email or password"]);
                 return;
             }
-            $ID = $res[0]["ID"];
-            
-            $st = static::$db->prepare("SELECT * FROM tokens WHERE role = ? and userID = ?");
-            $st->bindValue(1 , $userRole);
-            $st->bindValue(2 , $ID);
-            $st->execute();
-            $res = $st->fetchAll();
-            
-            if(count($res) == 0){
+
+            $ID = $user["ID"];
+
+            // Check existing token
+            $st = static::$db->prepare("SELECT * FROM tokens WHERE role = ? AND userID = ?");
+            $st->execute([$userRole, $ID]);
+            $existingToken = $st->fetch();
+
+            if (!$existingToken) {
                 $token = authenticateController::create();
-    
-                $st = static::$db->prepare("INSERT INTO tokens VALUES(NULL , ? , ? , ?)");
-                $st->bindValue(1 , $token);
-                $st->bindValue(2 , $userRole);
-                $st->bindValue(3 , $ID );
-                $st->execute();
-            }else{
-                $st = static::$db->prepare("UPDATE tokens SET token = ? WHERE role = ? and userID = ?");
-
-                $st->bindValue(1 , authenticateController::refresh());
-                $st->bindValue(2 , $userRole);
-                $st->bindValue(3 , $ID);
-                $st->execute();
-
+                $st = static::$db->prepare("INSERT INTO tokens VALUES(NULL, ?, ?, ?)");
+                $st->execute([$token, $userRole, $ID]);
+            } else {
+                $st = static::$db->prepare("UPDATE tokens SET token = ? WHERE role = ? AND userID = ?");
+                $st->execute([authenticateController::refresh(), $userRole, $ID]);
             }
 
-            App::SetCookies("role" , $userRole , "+7 days");
+            App::SetCookies("role", $userRole, "+7 days");
+
+            // Regenerate session ID to prevent session fixation attacks
+            session_regenerate_id(true);
+
             static::$db->commit();
             header("Location: /home");
             exit();
 
-        }catch(\Exception $r){
+        } catch (\Exception $r) {
             static::$db->rollBack();
-
-            echo View::make("log in" , ["errorM" => $r->getMessage()]);
-
+            echo View::make("log in", ["errorM" => "login failed. please try again."]);
             return;
         }
     }
 
     public function insertLogin(): View
     {
-        return View::make("log in" , ["errorM"=>null]);
+        return View::make("log in", ["errorM" => null]);
     }
 }

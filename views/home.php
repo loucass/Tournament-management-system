@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $_SESSION["USER"]["role"] ?> home</title>
+    <title><?= htmlspecialchars($_SESSION["USER"]["role"] ?? '', ENT_QUOTES, 'UTF-8') ?> home</title>
     <style>
     * {
         margin: 0;
@@ -321,9 +321,9 @@
 <body>
     <nav>
         <div class="nav-content">
-            <span class="teacher-name">Mr. <?=$_SESSION["USER"]["name"]?></span>
+            <span class="teacher-name">Mr. <?= htmlspecialchars($_SESSION["USER"]["name"] ?? '', ENT_QUOTES, 'UTF-8') ?></span>
             <?php
-        if($_SESSION["USER"]["role"] == "teachers") {
+        if($_SESSION["USER"]["role"] == "admin") {
             echo <<< here
                 <div class="search-container">
                 <input type="text" id="searchInput" placeholder="Search students or teams...">
@@ -338,7 +338,7 @@
     </nav>
 
     <main>
-        <h1>Welcome, <?= $_SESSION["USER"]["role"] == "teacher" ?? "Mr."?> <?= $_SESSION["USER"]["name"] ?></h1>
+        <h1>Welcome, <?= htmlspecialchars($_SESSION["USER"]["name"] ?? '', ENT_QUOTES, 'UTF-8') ?></h1>
         <p id="jokeText">Loading joke...</p>
 
         <div class="card">
@@ -347,13 +347,13 @@
                 <h2>Quick Actions</h2>
                 <div class="button-grid">
                     <?php
-        if($_SESSION["USER"]["role"] == "teachers") {
+        if($_SESSION["USER"]["role"] == "admin") {
             echo <<< here
             <a href="/addStudent" class="action-button">Add Student</a>
             <a href="/addTeam" class="action-button">Create Team</a>
             <a href="/addCompetition" class="action-button">Add Competition</a>
             here;
-        }else if ($_SESSION["USER"]["role"] != "teams_participants"){
+        }else if ($_SESSION["USER"]["role"] != "teams"){
             echo <<< here
             <a href="/joinCompetition" class="action-button">join competition</a>
             here;
@@ -387,17 +387,12 @@
         });
     });
 
-    <?php if ($_SESSION["USER"]["role"] == "teachers"): ?>
+    <?php if ($_SESSION["USER"]["role"] == "admin"): ?>
 
-    const students = [
-        "Alice Johnson", "Bob Smith", "Charlie Brown", "Diana Prince", "Ethan Hunt"
-    ];
-    const teamMembers = [
-        "Frank Castle", "Gina Davis", "Harry Potter", "Iris West", "Jack Sparrow"
-    ];
-    const teams = [
-        "Alpha Team", "Beta Squad", "Gamma Group", "Delta Force", "Epsilon Unit"
-    ];
+    // Real data passed from server
+    const students = <?= json_encode(array_map(fn($s) => $s['name'], $participants ?? [])) ?>;
+    const teamMembers = <?= json_encode(array_map(fn($m) => $m['name'], $teamsParticipants ?? [])) ?>;
+    const teams = <?= json_encode(array_map(fn($t) => $t['name'], $teams ?? [])) ?>;
 
     const searchInput = document.getElementById('searchInput');
     const searchResults = document.getElementById('searchResults');
