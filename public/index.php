@@ -15,6 +15,7 @@ use App\Controllers\HomeController;
 use App\Controllers\JoinCompetitionController;
 use App\Controllers\LogInController;
 use App\Controllers\LogoutController;
+use App\Controllers\SignUpController;
 use App\Controllers\ViewCompetitionController;
 use App\Controllers\ViewCompetitionDetailsController;
 use App\Router;
@@ -60,6 +61,9 @@ $router
     ->get('/viewCompetitionDetails', [ViewCompetitionDetailsController::class, 'insert'])
 
     ->post('/editPoints', [EditPointsController::class, 'update'])
+
+    ->get('/signUp', [SignUpController::class, 'showForm'])
+    ->post('/signUp', [SignUpController::class, 'signup'])
 
     ->get('/logout', [LogoutController::class, 'logout'])
 ;
