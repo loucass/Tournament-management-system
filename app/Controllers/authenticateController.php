@@ -17,87 +17,77 @@ class authenticateController
         $role = $_COOKIE["role"] ?? '';
 
         // Whitelist allowed roles to prevent SQL injection
-        $allowedRoles = ['teachers', 'users', 'teams', 'teams_participants'];
+        $allowedRoles = ['admin', 'student', 'teams'];
         if (!in_array($role, $allowedRoles)) {
-            $role = '';
+            return false;
         }
 
-        if($teacher){
-            if($token && $role == "teachers"){
-                static::$db = App::db();
-                $st = static::$db->prepare("SELECT * FROM tokens WHERE token = ? AND role = 'teachers'");
-                $st->bindValue(1, $token);
-                $st->execute();
-        
-                $result = $st->fetchAll();
-                
-                if(count($result)>0){
-        
-                    $st = static::$db->prepare("SELECT * FROM teachers where ID = ?");
-                    $st->bindValue(1, $result[0]["userID"]);
-                    $st->execute();
-                    $result = $st->fetchAll();
-        
-                    $_SESSION["USER"] = [
-                        "ID"=>$result[0]["ID"],
-                        "name"=>$result[0]["name"],
-                        "email"=>$result[0]["email"],
-                        "role"=> "teachers"
-                        ];
-                    return true;
-                }
-                return false;
-            }
-            return false;
-        }else{
-            // if not teacher
-            if($token){
-                static::$db = App::db();
-                $st = static::$db->prepare("SELECT * FROM tokens WHERE token = ? AND role = ?");
-                $st->bindValue(1, $token);
-                $st->bindValue(2, $role);
-                $st->execute();
-    
-                $result = $st->fetchAll();
-                
-                if(count($result)>0){
-    
-                    $st = static::$db->prepare("SELECT * FROM " . $role . " where ID = ?");
-                    $st->bindValue(1, $result[0]["userID"]);
-                    $st->execute();
-                    $result = $st->fetchAll();
-    
-                    $_SESSION["USER"] = [
-                        "ID"=>$result[0]["ID"],
-                        "name"=>$result[0]["name"],
-                        "email"=>$result[0]["email"],
-                        "role"=> $role
-                        ];
-                    return true;
-                }
-                return false;
-            }
+        if (!$token) {
             return false;
         }
+
+        static::$db = App::db();
+
+        // Find token in database
+        $st = static::$db->prepare("SELECT * FROM tokens WHERE token = ? AND role = ?");
+        $st->execute([$token, $role]);
+        $result = $st->fetch();
+
+        if (!$result) {
+            return false;
+        }
+
+        $userID = $result["userID"];
+
+        // If teacher check is requested, verify admin role
+        if ($teacher && $role !== 'admin') {
+            return false;
+        }
+
+        // Fetch user from appropriate table
+        if ($role === 'teams') {
+            $st = static::$db->prepare("SELECT * FROM teams WHERE ID = ?");
+            $st->execute([$userID]);
+            $user = $st->fetch();
+        } else {
+            $st = static::$db->prepare("SELECT * FROM users WHERE ID = ?");
+            $st->execute([$userID]);
+            $user = $st->fetch();
+        }
+
+        if (!$user) {
+            return false;
+        }
+
+        $_SESSION["USER"] = [
+            "ID" => $user["ID"],
+            "name" => $user["name"],
+            "email" => $user["email"],
+            "role" => $role
+        ];
+        return true;
     }
+
     public static function create()
     {
         $token = static::getToken();
         App::SetCookies("JTK", $token, "+7 days");
         return $token;
     }
+
     public static function refresh()
     {
         $token = static::getToken();
         App::SetCookies("JTK", $token, "+7 days");
         return $token;
     }
+
     private static function getToken(): string
     {
         $userAgent = $_SERVER["HTTP_USER_AGENT"] ?? 'cli';
         $userIP = $_SERVER["REMOTE_ADDR"] ?? '127.0.0.1';
         $token = bin2hex(random_bytes(64));
-        $token = hash("sha256" , (string) $userAgent . $userIP . $token);
+        $token = hash("sha256", $userAgent . $userIP . $token);
         return $token;
     }
 }

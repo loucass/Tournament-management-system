@@ -4,54 +4,48 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\{App , View};
-use App\Exceptions\{AuthenticationFailedException , RouteNotFoundException};
+use App\{App, View};
+use App\Exceptions\{AuthenticationFailedException, RouteNotFoundException};
 
 class HomeController
 {
     public function index()
     {
         try {
+            // Authenticate the user
             $auth = authenticateController::verify(false);
 
             if (!$auth) {
                 header("Location: /logIn");
                 exit();
+            }
+
+            // Check if user is admin (teacher)
+            $isAdmin = ($_SESSION["USER"]["role"] ?? '') === 'admin';
+
+            if ($isAdmin) {
+                // Admin view: fetch all students, teams, and team members
+                $st = App::db()->prepare("SELECT u.name, u.ID FROM users u WHERE u.role = 'student' ORDER BY u.name");
+                $st->execute();
+                $participants = $st->fetchAll();
+
+                $st = App::db()->prepare("SELECT t.ID, t.name FROM teams t ORDER BY t.name");
+                $st->execute();
+                $teams = $st->fetchAll();
+
+                // Get team members (students who have a teamID set)
+                $st = App::db()->prepare("SELECT u.ID, u.name, u.teamID FROM users u WHERE u.teamID IS NOT NULL ORDER BY u.name");
+                $st->execute();
+                $teamMembers = $st->fetchAll();
+
+                echo View::make("home", [
+                    "participants" => $participants,
+                    "teams" => $teams,
+                    "teamsParticipants" => $teamMembers
+                ]);
             } else {
-                if (authenticateController::verify(true)) {
-                    $q1 = "SELECT u.name , u.ID FROM users u ";
-                    $q2 = "SELECT t.ID , t.name FROM teams t ";
-                    $q3 = "SELECT tp.ID , tp.name FROM teams_participants tp ";
-
-                    $st = App::db()->prepare($q1);
-                    $st->execute();
-
-                    $participants = $st->fetchAll();
-
-                    $st = App::db()->prepare($q2);
-                    $st->execute();
-
-                    $teams = $st->fetchAll();
-
-                    $st = App::db()->prepare($q3);
-                    $st->execute();
-
-                    $teamsParticipants = $st->fetchAll();
-
-                    echo View::make("home" , [
-                        "participants" =>$participants,
-                        "teams" =>$teams,
-                        "teamsParticipants" =>$teamsParticipants
-                        ]);
-                    }
-                    else{
-                        if($auth){
-                        echo View::make("home" , ["errorM"=>null]);
-                    }else{
-                        header("Location: /logIn");
-                        exit();
-                    }
-                }
+                // Student / team view
+                echo View::make("home", ["errorM" => null]);
             }
         } catch (\Exception $r) {
             header("Location: /logIn");

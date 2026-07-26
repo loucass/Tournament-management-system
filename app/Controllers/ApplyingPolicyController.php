@@ -11,44 +11,78 @@ class ApplyingPolicyController
 
     private static \PDO $db;
 
+    /**
+     * Returns students who can still be added to teams (fewer than 5 competition applications total).
+     */
     public static function verifyForTeams()
     {
         static::$db = App::db();
-        $q1 = 'SELECT u.name FROM users u LEFT JOIN teams_participants tp ON u.ID = tp.ID ';
-        $q2 = 'LEFT JOIN competitions_applications ca1 ON ca1.participantID = u.ID ';
-        $q3 = 'LEFT JOIN competitions_applications ca2 ON ca2.participantID = tp.teamID ';
-        $q4 = 'GROUP BY u.name HAVING COUNT(DISTINCT ca2.competitionID) + COUNT(DISTINCT ca1.competitionID) < 5';
-        $query = (string) $q1 . $q2 . $q3 . $q4;
-        $st = static::$db->prepare($query);
-        $st->execute();
 
+        // Count total competition applications per student (direct + via team)
+        $q = "SELECT u.name, u.ID, 
+              (COALESCE(direct_apps.cnt, 0) + COALESCE(team_apps.cnt, 0)) AS applications 
+              FROM users u
+              LEFT JOIN (
+                SELECT participantID, COUNT(*) AS cnt 
+                FROM competitions_applications 
+                GROUP BY participantID
+              ) direct_apps ON direct_apps.participantID = u.ID
+              LEFT JOIN (
+                SELECT tp.teamID, COUNT(*) AS cnt 
+                FROM competitions_applications ca
+                JOIN users tp ON tp.ID = ca.participantID AND tp.teamID IS NOT NULL
+                GROUP BY tp.teamID
+              ) team_apps ON team_apps.teamID = u.teamID
+              WHERE u.role = 'student'
+              GROUP BY u.ID
+              HAVING applications < 5
+              ORDER BY u.name";
+
+        $st = static::$db->query($q);
         $result = $st->fetchAll();
-        if(count($result) > 0){
+
+        if (count($result) > 0) {
             return json_encode($result);
         }
-        return false;
+        return json_encode([]);
     }
+
+    /**
+     * Returns how many more competitions a user can join (max 5).
+     */
     public static function verify()
     {
         static::$db = App::db();
 
-        $q1 = 'SELECT u.name , COUNT(DISTINCT ca2.competitionID) + COUNT(DISTINCT ca1.competitionID) AS applications FROM users u ';
-        $q2 = 'LEFT JOIN teams_participants tp ON u.ID = tp.userID ';
-        $q3 = 'LEFT JOIN competitions_applications ca1 ON ca1.participantID = u.ID ';
-        $q4 = 'LEFT JOIN competitions_applications ca2 ON ca2.participantID = tp.teamID ';
-        $q5 = 'WHERE u.name = ? GROUP BY u.name ';
+        $userID = $_SESSION["USER"]["ID"] ?? null;
+        if (!$userID) {
+            return false;
+        }
 
-        $query = (string) $q1 . $q2 . $q3 . $q4 . $q5;
+        // Count applications for this user (direct + via team)
+        $q = "SELECT 
+              (COALESCE(direct_apps.cnt, 0) + COALESCE(team_apps.cnt, 0)) AS applications
+              FROM users u
+              LEFT JOIN (
+                SELECT participantID, COUNT(*) AS cnt 
+                FROM competitions_applications 
+                GROUP BY participantID
+              ) direct_apps ON direct_apps.participantID = u.ID
+              LEFT JOIN (
+                SELECT tp.teamID, COUNT(*) AS cnt 
+                FROM competitions_applications ca
+                JOIN users tp ON tp.ID = ca.participantID AND tp.teamID IS NOT NULL
+                GROUP BY tp.teamID
+              ) team_apps ON team_apps.teamID = u.teamID
+              WHERE u.ID = ?
+              GROUP BY u.ID";
 
-        $st = static::$db->prepare($query);
-        $st->bindValue(1, $_SESSION["USER"]["name"]);
+        $st = static::$db->prepare($q);
+        $st->execute([$userID]);
+        $result = $st->fetch();
 
-        $st->execute();
-    
-        $result = $st->fetchAll();
-
-        if(count($result) > 0 && $result[0]["applications"] < 5){
-            return 5 - $result[0]["applications"];
+        if ($result && $result["applications"] < 5) {
+            return 5 - (int)$result["applications"];
         }
         return false;
     }

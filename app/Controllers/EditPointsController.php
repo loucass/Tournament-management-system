@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\App;
-use App\Controllers\authenticateController ;
+use App\Controllers\authenticateController;
 use App\View;
 
 class EditPointsController
@@ -16,65 +16,51 @@ class EditPointsController
     public function update()
     {
         static::$db = App::db();
-    
-        try{
-            if(!authenticateController::verify(true)){
+
+        try {
+            if (!authenticateController::verify(true)) {
                 header("Location: /logIn");
                 exit();
             }
             static::$db->beginTransaction();
-            
-            $query = "SELECT c.ID competitionID FROM competitions c WHERE c.category = ? AND c.name = ? ";
 
-            $st = static::$db->prepare($query);
-            $st->bindValue(1 , strtolower(filter_input(INPUT_POST , "category" , FILTER_SANITIZE_STRING)));
-            $st->bindValue(2 , strtolower(filter_input(INPUT_POST , "competitionName" , FILTER_SANITIZE_STRING)));
-            $st->execute();
-            
-            $competitionID = ($st->fetchAll())[0]["competitionID"];
-            
-            $query = "SELECT * FROM competitions_points WHERE participantID = ? AND competitionID = ?";
+            $category = strtolower(trim($_POST["category"] ?? ''));
+            $competitionName = strtolower(trim($_POST["competitionName"] ?? ''));
+            $participantID = $_POST["ID"] ?? null;
+            $participantName = strtolower(trim($_POST["participantName"] ?? ''));
+            $points = (int)($_POST["points"] ?? 0);
 
-            $st = static::$db->prepare($query);
-            $st->bindValue(1 , strtolower(filter_input(INPUT_POST , "ID" , FILTER_VALIDATE_INT)));
-            $st->bindValue(2 , $competitionID);
-            $st->execute();
-            
-            if(count($st->fetchAll()) > 0){
-                $query = "UPDATE competitions_points SET points = ? WHERE participantID = ? AND competitionID = ?";
-                
-                $st = static::$db->prepare($query);
-                $st->bindValue(1 , strtolower(filter_input(INPUT_POST , "points" , FILTER_VALIDATE_INT)));
-                $st->bindValue(2 , strtolower(filter_input(INPUT_POST , "ID" , FILTER_VALIDATE_INT)));
-                $st->bindValue(3 , $competitionID);
-                $st->execute();
+            // Find competition ID
+            $st = static::$db->prepare("SELECT ID FROM competitions WHERE category = ? AND name = ?");
+            $st->execute([$category, $competitionName]);
+            $compRow = $st->fetch();
 
-                echo "done";
-
-                static::$db->commit();
-                
+            if (!$compRow) {
+                echo "error: competition not found";
                 return;
             }
-            
-            $query = "INSERT INTO competitions_points VALUES(NULL, ?, ?, ?, ?, ?)";
 
-            $st = static::$db->prepare($query);
-            $st->bindValue(1 , strtolower(filter_input(INPUT_POST , "ID" , FILTER_VALIDATE_INT)));
-            $st->bindValue(2 , $competitionID);
-            $st->bindValue(3 , strtolower(filter_input(INPUT_POST , "competitionName" , FILTER_SANITIZE_STRING)));
-            $st->bindValue(4 , strtolower(filter_input(INPUT_POST , "participantName" , FILTER_SANITIZE_STRING)));
-            $st->bindValue(5 , strtolower(filter_input(INPUT_POST , "points" , FILTER_VALIDATE_INT)));
-            $st->execute();
+            $competitionID = $compRow["ID"];
+
+            // Check if points record exists
+            $st = static::$db->prepare("SELECT * FROM competitions_points WHERE participantID = ? AND competitionID = ?");
+            $st->execute([$participantID, $competitionID]);
+            $existing = $st->fetch();
+
+            if ($existing) {
+                $st = static::$db->prepare("UPDATE competitions_points SET points = ? WHERE participantID = ? AND competitionID = ?");
+                $st->execute([$points, $participantID, $competitionID]);
+            } else {
+                $st = static::$db->prepare("INSERT INTO competitions_points VALUES(NULL, ?, ?, ?, ?)");
+                $st->execute([$participantID, $competitionID, $competitionName, $points]);
+            }
 
             echo "done";
-
             static::$db->commit();
 
-        }catch(\PDOException $e){
-            echo "error \n";
-            echo $e->getMessage();
+        } catch (\PDOException $e) {
+            echo "error: " . $e->getMessage();
             static::$db->rollBack();
         }
-        return;
     }
 }

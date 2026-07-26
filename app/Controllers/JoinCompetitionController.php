@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\App;
-use App\Controllers\authenticateController ;
+use App\Controllers\authenticateController;
 use App\View;
 
 class JoinCompetitionController
@@ -15,8 +15,8 @@ class JoinCompetitionController
 
     public function join(): void
     {
-        try{
-            if(!authenticateController::verify(false)){
+        try {
+            if (!authenticateController::verify(false)) {
                 header("Location: /logIn");
                 exit();
             }
@@ -24,74 +24,80 @@ class JoinCompetitionController
 
             static::$db->beginTransaction();
 
-            foreach($_POST["competitions"] as $competition){
+            $competitions = $_POST["competitions"] ?? [];
+            if (!is_array($competitions)) {
+                echo View::make("join competition", ["errorM" => "no competitions selected", "competitions" => null]);
+                return;
+            }
+
+            foreach ($competitions as $competitionName) {
+                $competitionName = trim($competitionName);
+                $participantID = $_SESSION["USER"]["ID"];
+                $role = $_SESSION["USER"]["role"];
+
+                // Check if already applied
                 $st = static::$db->prepare("SELECT * FROM competitions_applications WHERE competitionName = ? AND participantID = ?");
-                $st->bindValue(1 , trim($competition));
-                $st->bindValue(2 , $_SESSION["USER"]["ID"]);
-                $st->execute();
-                $res = $st->fetchAll();
-                
-                if(count($res) > 0){
-                    echo View::make("join competition" , ["errorM" => "competition has already added"]);
-                    return;
-                }
-                
-                $st = static::$db->prepare("SELECT ID , competitionName , COUNT(*) as total FROM competitions_applications WHERE competitionName = ? GROUP BY competitionName");
-                $st->bindValue(1 , trim($competition));
-                $st->execute();
-                $totalApplications = $st->fetchAll()[0]["total"];
-
-                if($_COOKIE["role"] == "teams" && $totalApplications >= 4 
-                || $_COOKIE["role"] == "individuals" && $totalApplications >= 20
-                ){
-                    echo View::make("join competition" , ["errorM" => "competition is full"]);
+                $st->execute([$competitionName, $participantID]);
+                if ($st->fetch()) {
+                    echo View::make("join competition", ["errorM" => "already applied to this competition", "competitions" => null]);
                     return;
                 }
 
+                // Check capacity limits
+                $st = static::$db->prepare("SELECT COUNT(*) as total FROM competitions_applications WHERE competitionName = ?");
+                $st->execute([$competitionName]);
+                $totalApplications = $st->fetch()["total"];
 
+                if (($role === "teams" && $totalApplications >= 4) ||
+                    ($role === "student" && $totalApplications >= 20)) {
+                    echo View::make("join competition", ["errorM" => "competition is full", "competitions" => null]);
+                    return;
+                }
+
+                // Get competition ID
                 $st = static::$db->prepare("SELECT ID FROM competitions WHERE name = ?");
-                $st->bindValue(1 , trim($competition));
-                $st->execute();
-                $CompetitionID = $st->fetchAll()[0]["ID"];
-                
-                $st = static::$db->prepare("INSERT INTO competitions_applications VALUES(NULL , ? , ? , ? , ?)");
-                $st->bindValue(1 , $_SESSION["USER"]["ID"]);
-                $st->bindValue(2 , $CompetitionID);
-                $st->bindValue(3 , trim($competition));
-                $st->bindValue(4 , $_COOKIE["role"]);
-                $st->execute();
-                $res = $st->fetchAll();
+                $st->execute([$competitionName]);
+                $compRow = $st->fetch();
+                if (!$compRow) {
+                    echo View::make("join competition", ["errorM" => "competition not found", "competitions" => null]);
+                    return;
+                }
+                $CompetitionID = $compRow["ID"];
+
+                // Insert application
+                $st = static::$db->prepare("INSERT INTO competitions_applications VALUES(NULL, ?, ?, ?, ?)");
+                $st->execute([$participantID, $CompetitionID, $competitionName, $role]);
             }
 
             static::$db->commit();
             header("Location: /home");
             exit();
 
-        }catch(\Exception $r){
+        } catch (\Exception $r) {
             static::$db->rollBack();
-
-            echo View::make("join competition" , ["errorM" => $r->getMessage()]);
-
+            echo View::make("join competition", ["errorM" => "failed to join competition. please try again.", "competitions" => null]);
             return;
         }
     }
 
     public function insert(): View
     {
-        if(!authenticateController::verify(false)){
+        if (!authenticateController::verify(false)) {
             header("Location: /logIn");
             exit();
         }
         static::$db = App::db();
+        $role = $_SESSION["USER"]["role"] ?? '';
+
+        // Get available competitions for this user's category
         $st = static::$db->prepare("SELECT name FROM competitions WHERE category = ?");
-        $st->bindValue(1,$_COOKIE["role"]);
-        $st->execute();
+        $st->execute([$role === 'teams' ? 'teams' : 'individuals']);
         $res = $st->fetchAll();
         $competitions = App::convertToArray($res , "name");
 
-        return View::make("join competition" , [
-            "errorM" => null ,
+        return View::make("join competition", [
+            "errorM" => null,
             "competitions" => $competitions
-            ]);
+        ]);
     }
 }
