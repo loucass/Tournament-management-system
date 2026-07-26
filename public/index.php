@@ -22,10 +22,17 @@ use App\Router;
 define('STORAGE_PATH', __DIR__ . '/../storage');
 define('VIEW_PATH', __DIR__ . '/../views');
 
+// Security headers (Helmet-style)
+header("X-Frame-Options: DENY");
+header("X-Content-Type-Options: nosniff");
+header("X-XSS-Protection: 1; mode=block");
+header("Referrer-Policy: strict-origin-when-cross-origin");
+header("Permissions-Policy: geolocation=(), microphone=(), camera=()");
+header_remove("X-Powered-By");
+
+// CORS headers
 header("Access-Control-Allow-Origin: http://localhost:3000");
 header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Methods: *");
-header("Access-Control-Allow-Headers: *");
 
 $router = new Router();
 
