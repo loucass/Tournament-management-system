@@ -1,176 +1,70 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Competition List</title>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400;700&display=swap"
-        rel="stylesheet">
-    <style>
-    :root {
-        --bg-color: #121212;
-        --text-color: #ffffff;
-        --primary-color: #00ffff;
-        --secondary-color: #ff00ff;
-        --accent-color: #ffff00;
-        --success-color: #00ff00;
-        --danger-color: #ff4500;
-    }
-
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
-
-    body {
-        font-family: 'Roboto', sans-serif;
-        background-color: var(--bg-color);
-        color: var(--text-color);
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        padding: 2rem;
-    }
-
-    header {
-        margin-bottom: 2rem;
-    }
-
-    h1 {
-        font-family: 'Orbitron', sans-serif;
-        font-size: 2.5rem;
-        color: var(--primary-color);
-        text-shadow: 0 0 10px var(--primary-color);
-        text-align: center;
-    }
-
-    .competition-list {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .competition-item {
-        background-color: rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
-        padding: 1.5rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        transition: all 0.3s ease;
-        cursor: pointer;
-    }
-
-    .competition-item:hover {
-        background-color: rgba(255, 255, 255, 0.2);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 10px rgba(0, 255, 255, 0.3);
-    }
-
-    .competition-name {
-        font-size: 1.2rem;
-        color: var(--secondary-color);
-        font-weight: bold;
-    }
-
-    .winner-info {
-        font-size: 0.9rem;
-        color: var(--accent-color);
-    }
-
-    @keyframes pulse {
-        0% {
-            transform: scale(1);
-        }
-
-        50% {
-            transform: scale(1.05);
-        }
-
-        100% {
-            transform: scale(1);
-        }
-    }
-
-    .competition-item:hover .competition-name {
-        animation: pulse 1s infinite;
-    }
-
-    .category {
-        font-family: 'Orbitron', sans-serif;
-        font-size: 0.8rem;
-        color: var(--primary-color);
-        text-shadow: 0 0 10px var(--primary-color);
-        text-align: center;
-    }
-
-    a {
-        text-decoration: none;
-    }
-    </style>
+    <title>COMPETITIONS — Tournament System</title>
+    <link rel="stylesheet" href="/assets/css/app.css">
 </head>
-
 <body>
-    <header>
-        <h1>Competition List</h1>
-    </header>
-    <main>
-        <div class="competition-list" id="competitionList">
-            <!-- Competition items will be dynamically inserted here -->
+    <nav class="nav">
+        <div class="nav-content">
+            <span class="nav-brand">// COMPETITIONS</span>
+            <a href="/home" class="btn btn-sm btn-secondary">&#8592; BACK</a>
         </div>
-        <div class="competition-list" id="upcomingCompetitionList">
-            <!-- Competition items will be dynamically inserted here -->
+    </nav>
+
+    <main class="container" style="padding-top: 3rem; padding-bottom: 3rem;">
+        <div class="hero" style="padding-top: 1rem; padding-bottom: 2rem;">
+            <h1>ALL CHALLENGES</h1>
+            <p>browse ongoing and upcoming competitions</p>
+        </div>
+
+        <div id="competitionList" style="display: flex; flex-direction: column; gap: 1rem; max-width: 700px; margin: 0 auto;"></div>
+
+        <div id="upcomingSection" style="display: none; margin-top: 3rem;">
+            <h2 style="text-align: center; margin-bottom: 1.5rem;">// NOT JOINED YET</h2>
+            <div id="upcomingCompetitionList" style="display: flex; flex-direction: column; gap: 1rem; max-width: 700px; margin: 0 auto;"></div>
         </div>
     </main>
 
     <script>
-    // Sample data for competitions
-    const competitions = JSON.parse('<?= $competitions ?>')
-
-    const competitionList = document.getElementById('competitionList');
+    const competitions = JSON.parse('<?= $competitions ?>');
 
     function renderCompetitions() {
-        competitionList.innerHTML = '';
-        competitions.forEach(comp => {
-            const competitionItem = document.createElement('a');
-            competitionItem.href = `/viewCompetitionDetails?competition=${comp.name}&category=${comp.category}`
-            competitionItem.className = 'competition-item';
-            competitionItem.innerHTML = `
-            <span class="competition-name">${comp.name} <span class="category">(${comp.category} competition)</span></span>
-            <span class="winner-info">Winner: ${comp.winner}</span>
-            `;
-            competitionList.appendChild(competitionItem);
-        });
+        const list = document.getElementById('competitionList');
+        list.innerHTML = competitions.map(comp => `
+            <a href="/viewCompetitionDetails?competition=${comp.name}&category=${comp.category}" class="card" style="display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                <div>
+                    <div style="font-family: var(--font-heading); font-size: 0.9rem; color: var(--pink); margin-bottom: 0.3rem;">${comp.name}</div>
+                    <div class="badge badge-cyan">${comp.category}</div>
+                </div>
+                <div class="badge badge-gold" style="text-align: right;">
+                    ${comp.winner ? 'Winner: ' + comp.winner : 'No winner yet'}
+                </div>
+            </a>
+        `).join('');
     }
 
     renderCompetitions();
+
     <?php
     $role = $_COOKIE["role"] ?? '';
     if($role != "admin"):
     ?>
-    const NONcompetitions = JSON.parse('<?= $NONcompetitions ?>')
-
-    function renderUpcomingCompetitions() {
-        upcomingCompetitionList.innerHTML = '';
-        NONcompetitions.forEach(comp => {
-            const competitionItem = document.createElement('a');
-            competitionItem.className = 'competition-item';
-            competitionItem.innerHTML = `
-                    <span class="competition-name">${comp.name} <span class="category">(${comp.category} competition)</span></span>
-                    <span class="winner-info">Winner: ${comp.winner}</span>
-                `;
-            competitionList.appendChild(competitionItem);
-        });
-    }
-    competitionList.innerHTML += `<H2>non joined competitions</H2>`
-    renderUpcomingCompetitions()
-    <?php
-        endif
-    ?>
+    document.getElementById('upcomingSection').style.display = 'block';
+    const nonCompetitions = JSON.parse('<?= $NONcompetitions ?>');
+    const upcomingList = document.getElementById('upcomingCompetitionList');
+    upcomingList.innerHTML = nonCompetitions.map(comp => `
+        <div class="card" style="display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+            <div>
+                <div style="font-family: var(--font-heading); font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.3rem;">${comp.name}</div>
+                <div class="badge">${comp.category}</div>
+            </div>
+            <div class="badge" style="text-align: right;">Not joined</div>
+        </div>
+    `).join('');
+    <?php endif; ?>
     </script>
 </body>
-
 </html>

@@ -1,245 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>add student Form</title>
-    <style>
-    @keyframes fall {
-        0% {
-            transform: translateY(-100vh) rotate(0deg);
-        }
-
-        100% {
-            transform: translateY(100vh) rotate(360deg);
-        }
-    }
-
-    body {
-        font-family: monospace;
-        text-transform: capitalize;
-        background-color: #000000;
-        margin: 0;
-        padding: 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        overflow: hidden;
-    }
-
-
-    .stars {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-    }
-
-    .star {
-        position: absolute;
-        width: 2px;
-        height: 2px;
-        background-color: #ffffff;
-        border-radius: 50%;
-        animation: fall linear infinite;
-    }
-
-    .form-container {
-        background-color: rgba(0, 0, 0, 0.8);
-        border: 2px solid #1e90ff;
-        border-radius: 15px;
-        padding: 40px;
-        width: 300px;
-        box-shadow: 0 0 20px rgba(30, 144, 255, 0.3);
-        position: relative;
-        overflow: hidden;
-        z-index: 1;
-    }
-
-    h1 {
-        color: #1e90ff;
-        text-align: center;
-        font-size: 2.5em;
-        margin-bottom: 30px;
-        text-shadow: 0 0 5px rgba(30, 144, 255, 0.5);
-    }
-
-    form {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .input-container {
-        position: relative;
-        margin-bottom: 20px;
-    }
-
-    label {
-        color: #1e90ff;
-        position: absolute;
-        top: 0;
-        left: 10px;
-        transform: translateY(-50%);
-        background-color: #000000;
-        padding: 0 5px;
-        font-size: 0.9em;
-        transition: all 0.3s ease;
-    }
-
-    input,
-    select {
-        width: 100%;
-        padding: 10px;
-        border: 2px solid #1e90ff;
-        border-radius: 5px;
-        font-size: 1em;
-        background-color: transparent;
-        color: #ffffff;
-        transition: all 0.3s ease;
-    }
-
-    option {
-        border: 2px solid #1e90ff;
-        border-radius: 5px;
-        background-color: transparent;
-        color: #000000;
-    }
-
-    input:focus {
-        outline: none;
-        border-color: #00bfff;
-        box-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
-    }
-
-    input:focus+label,
-    input:not(:placeholder-shown)+label {
-        top: 0;
-        font-size: 0.8em;
-        color: #00bfff;
-    }
-
-    button {
-        background-color: #1e90ff;
-        color: #ffffff;
-        border: none;
-        padding: 12px;
-        font-size: 1.1em;
-        border-radius: 5px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        letter-spacing: 1px;
-    }
-
-    button:hover {
-        background-color: #00bfff;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0, 191, 255, 0.3);
-    }
-
-    .forgot-password,
-    .signup {
-        text-align: center;
-        margin-top: 20px;
-    }
-
-    .signup p {
-        color: aliceblue;
-    }
-
-    .forgot-password a,
-    .signup a {
-        color: #1e90ff;
-        text-decoration: none;
-        font-size: 0.9em;
-        transition: all 0.3s ease;
-    }
-
-    .forgot-password a:hover,
-    .signup a:hover {
-        color: #00bfff;
-        text-shadow: 0 0 5px rgba(0, 191, 255, 0.5);
-    }
-
-    .decorative-line {
-        width: 50px;
-        height: 2px;
-        background-color: #1e90ff;
-        margin: 30px auto 0;
-        transition: width 0.3s ease;
-    }
-
-    .form-container:hover .decorative-line {
-        width: 100px;
-    }
-
-    .error {
-        color: red;
-        text-align: center;
-        margin-top: 10px;
-    }
-
-    a {
-        color: #1e90ff;
-        text-align: center;
-        text-decoration: none;
-        margin-top: 10px;
-        font-size: 1em;
-    }
-
-    a:hover {
-        color: #ffffff;
-    }
-    </style>
+    <title>ADD STUDENT — Tournament System</title>
+    <link rel="stylesheet" href="/assets/css/app.css">
 </head>
-
 <body>
-    <div class="container">
-        <div class="stars"></div>
-        <div class="form-container">
-            <h1>add student Form</h1>
+    <div class="stars-container" id="stars"></div>
+
+    <div class="container" style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem 1rem;">
+        <div class="card" style="width: 100%; max-width: 400px; padding: 2.5rem;">
+            <div class="decorative-corner decorative-corner-tl"></div>
+            <div class="decorative-corner decorative-corner-br"></div>
+
+            <div class="text-center" style="margin-bottom: 2rem;">
+                <h1 style="font-size: 1.4rem; margin-bottom: 0.3rem;">ADD STUDENT</h1>
+                <p style="font-size: 0.75rem; color: var(--text-muted);">register a new participant</p>
+            </div>
+
             <form method="post">
                 <?= App\App::csrf_field() ?>
-                <div class="input-container">
-                    <input type="text" id="user name" name="userName" required placeholder=" ">
-                    <label for="user role">user name</label>
+
+                <div class="form-group">
+                    <label class="form-label" for="userName">Name</label>
+                    <input type="text" id="userName" name="userName" class="form-input" required placeholder="student name">
                 </div>
-                <div class="input-container">
-                    <input type="email" id="user email" name="userEmail" required placeholder=" ">
-                    <label for="user email">user email</label>
+
+                <div class="form-group">
+                    <label class="form-label" for="userEmail">Email</label>
+                    <input type="email" id="userEmail" name="userEmail" class="form-input" required placeholder="student@email.com">
                 </div>
-                <div class="input-container">
-                    <input type="password" id="password" name="password" required placeholder=" ">
-                    <label for="password">Password</label>
+
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <input type="password" id="password" name="password" class="form-input" required placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;">
                 </div>
-                <button type="submit">add user</button>
-                <a href="/home">back</a>
-                <div class="error"><?= htmlspecialchars($errorM ?? '', ENT_QUOTES, 'UTF-8') ?></div>
-                <div class="decorative-line"></div>
+
+                <button type="submit" class="btn btn-secondary btn-block btn-lg">ADD STUDENT</button>
+                <a href="/home" class="btn btn-sm btn-block" style="margin-top: 0.75rem; text-align: center;">&#8592; BACK</a>
+
+                <?php if (isset($errorM) && $errorM): ?>
+                    <div class="msg-error"><?= htmlspecialchars($errorM, ENT_QUOTES, 'UTF-8') ?></div>
+                <?php endif; ?>
             </form>
         </div>
     </div>
 
     <script>
     function createStars() {
-        const starsContainer = document.querySelector('.stars');
-        const numberOfStars = 100;
-
-        for (let i = 0; i < numberOfStars; i++) {
-            const star = document.createElement('div');
-            star.classList.add('star');
-            star.style.left = `${Math.random() * 100}%`;
-            star.style.animationDuration = `${Math.random() * 3 + 2}s`;
-            star.style.animationDelay = `${Math.random() * 3}s`;
-            starsContainer.appendChild(star);
+        const c = document.getElementById('stars');
+        for (let i = 0; i < 80; i++) {
+            const s = document.createElement('div');
+            s.className = 'star';
+            s.style.left = Math.random() * 100 + '%';
+            s.style.top = Math.random() * 100 + '%';
+            s.style.setProperty('--duration', (Math.random() * 3 + 2) + 's');
+            s.style.animationDelay = Math.random() * 3 + 's';
+            c.appendChild(s);
         }
     }
-
     createStars();
     </script>
 </body>
-
 </html>
