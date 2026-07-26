@@ -84,10 +84,8 @@ class authenticateController
 
     private static function getToken(): string
     {
-        $userAgent = $_SERVER["HTTP_USER_AGENT"] ?? 'cli';
-        $userIP = $_SERVER["REMOTE_ADDR"] ?? '127.0.0.1';
         $token = bin2hex(random_bytes(64));
-        $token = hash("sha256", $userAgent . $userIP . $token);
+        $token = hash("sha256", $token);
         return $token;
     }
 }
