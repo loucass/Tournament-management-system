@@ -16,11 +16,19 @@ class LogInController
     public function login(): void
     {
         try{
+            // Whitelist allowed roles to prevent SQL injection
+            $allowedRoles = ['teachers', 'users', 'teams', 'teams_participants'];
+            $userRole = $_POST["userRole"] ?? '';
+            if (!in_array($userRole, $allowedRoles)) {
+                echo View::make("log in" , ["errorM" => "invalid role selected"]);
+                return;
+            }
+
             static::$db = App::db();
             
             static::$db->beginTransaction();
             
-            $st = static::$db->prepare('SELECT * FROM ' . $_POST["userRole"] . " WHERE email = ? AND password = ?");
+            $st = static::$db->prepare('SELECT * FROM ' . $userRole . " WHERE email = ? AND password = ?");
             $st->bindValue(1 , strtolower(filter_input(INPUT_POST , "userEmail" , FILTER_VALIDATE_EMAIL)));
             $st->bindValue(2 ,hash("sha256" , filter_input(INPUT_POST , "password" , FILTER_SANITIZE_STRING)));
             $st->execute();
@@ -33,7 +41,7 @@ class LogInController
             $ID = $res[0]["ID"];
             
             $st = static::$db->prepare("SELECT * FROM tokens WHERE role = ? and userID = ?");
-            $st->bindValue(1 , strtolower(filter_input(INPUT_POST , "userRole" , FILTER_SANITIZE_STRING)));
+            $st->bindValue(1 , $userRole);
             $st->bindValue(2 , $ID);
             $st->execute();
             $res = $st->fetchAll();
@@ -43,20 +51,20 @@ class LogInController
     
                 $st = static::$db->prepare("INSERT INTO tokens VALUES(NULL , ? , ? , ?)");
                 $st->bindValue(1 , $token);
-                $st->bindValue(2 , strtolower(filter_input(INPUT_POST , "userRole" , FILTER_SANITIZE_STRING)));
+                $st->bindValue(2 , $userRole);
                 $st->bindValue(3 , $ID );
                 $st->execute();
             }else{
                 $st = static::$db->prepare("UPDATE tokens SET token = ? WHERE role = ? and userID = ?");
 
                 $st->bindValue(1 , authenticateController::refresh());
-                $st->bindValue(2 , strtolower(filter_input(INPUT_POST , "userRole" , FILTER_SANITIZE_STRING)));
+                $st->bindValue(2 , $userRole);
                 $st->bindValue(3 , $ID);
                 $st->execute();
 
             }
 
-            App::SetCookies("role" , $_POST["userRole"] , "+7 days");
+            App::SetCookies("role" , $userRole , "+7 days");
             static::$db->commit();
             header("Location: /home");
             exit();
