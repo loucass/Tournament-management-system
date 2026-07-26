@@ -4,37 +4,26 @@ CREATE DATABASE IF NOT EXISTS task_2
 
 USE task_2;
 
--- Individual students / participants
+-- Unified users table (replaces users, teachers, teams_participants)
+-- role: 'admin' (was teachers), 'student' (was users / teams_participants)
+-- teamID: when a student joins a team, this references the team
 CREATE TABLE IF NOT EXISTS users (
     ID INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL,
-    password VARCHAR(255) NOT NULL
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    role ENUM('admin', 'student') NOT NULL DEFAULT 'student',
+    teamID INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Teachers
-CREATE TABLE IF NOT EXISTS teachers (
-    ID INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL,
-    password VARCHAR(255) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- Teams
+-- Teams (group entities that compete independently)
 CREATE TABLE IF NOT EXISTS teams (
     ID INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL,
-    password VARCHAR(255) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- Team members (mapped from users when added to a team)
-CREATE TABLE IF NOT EXISTS teams_participants (
-    ID INT AUTO_INCREMENT PRIMARY KEY,
-    teamID INT NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL,
-    password VARCHAR(255) NOT NULL
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Competitions
