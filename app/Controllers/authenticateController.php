@@ -71,14 +71,14 @@ class authenticateController
     public static function create()
     {
         $token = static::getToken();
-        App::SetCookies("JTK", $token, "+7 days");
+        App::setCookies("JTK", $token, "+7 days");
         return $token;
     }
 
     public static function refresh()
     {
         $token = static::getToken();
-        App::SetCookies("JTK", $token, "+7 days");
+        App::setCookies("JTK", $token, "+7 days");
         return $token;
     }
 

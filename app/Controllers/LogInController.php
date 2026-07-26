@@ -65,7 +65,7 @@ class LogInController
                 $st->execute([authenticateController::refresh(), $userRole, $ID]);
             }
 
-            App::SetCookies("role", $userRole, "+7 days");
+            App::setCookies("role", $userRole, "+7 days");
 
             // Regenerate session ID to prevent session fixation attacks
             session_regenerate_id(true);

@@ -14,7 +14,7 @@ class LogoutController
     public function logout(): void
     {
         foreach($_COOKIE as $key => $value){
-            App::SetCookies($key , $value , "-1 days");
+            App::setCookies($key , $value , "-1 days");
         }
         // Clear session completely
         $_SESSION = [];
