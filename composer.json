@@ -10,7 +10,11 @@
             "App\\": "app/"
         }
     },
+    "config": {
+        "process-timeout": 0
+    },
     "scripts": {
-        "serve": "COMPOSER_PROCESS_TIMEOUT=0 php -S localhost:8080 -t public/"
+        "serve": "php -S localhost:8080 -t public/",
+        "console": "php console"
     }
 }

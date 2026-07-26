@@ -1,0 +1,84 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Tournament Management System — CLI Console
+ *
+ * Usage:
+ *   php console migrate              Run database migrations
+ *   php console seed:admin           Create an admin user
+ *   php console seed:demo            Seed demo data
+ *   php console serve                Start the PHP development server
+ *   php console help                 Show this help
+ */
+
+require __DIR__ . '/vendor/autoload.php';
+
+use App\Commands\MigrateCommand;
+use App\Commands\SeedCommand;
+
+// ---------------------------------------------------------------------------
+// Bootstrap: load config before anything else
+// ---------------------------------------------------------------------------
+\App\Services\Config::load();
+
+$command = $argv[1] ?? 'help';
+
+switch ($command) {
+    case 'migrate':
+        MigrateCommand::run();
+        break;
+
+    case 'seed:admin':
+        SeedCommand::admin();
+        break;
+
+    case 'seed:demo':
+        SeedCommand::demo();
+        break;
+
+    case 'serve':
+        $port = $argv[2] ?? '8080';
+        $host = $argv[3] ?? 'localhost';
+        $docRoot = __DIR__ . '/public';
+
+        echo "  ⚡ Starting PHP development server...\n\n";
+        echo "     Host:     {$host}\n";
+        echo "     Port:     {$port}\n";
+        echo "     Document: {$docRoot}\n";
+        echo "     URL:      http://{$host}:{$port}\n";
+        echo "\n";
+        echo "  Press Ctrl+C to stop the server.\n\n";
+
+        passthru(
+            sprintf(
+                'PHP_CLI_SERVER_WORKERS=%d php -S %s:%d -t %s',
+                4,
+                escapeshellarg($host),
+                (int) $port,
+                escapeshellarg($docRoot)
+            ),
+            $exitCode
+        );
+        exit($exitCode);
+
+    case 'help':
+    default:
+        echo "\n";
+        echo "  ⚡ TOURNAMENT CONSOLE\n";
+        echo "  ─────────────────────────────\n";
+        echo "  php console migrate            Run database migrations\n";
+        echo "  php console seed:admin         Create the admin user\n";
+        echo "  php console seed:demo          Seed demo data\n";
+        echo "  php console serve [port] [host] Start the dev server (default :8080)\n";
+        echo "  php console help               Show this help\n";
+        echo "\n";
+        echo "  Examples:\n";
+        echo "    php console serve             → http://localhost:8080\n";
+        echo "    php console serve 3000        → http://localhost:3000\n";
+        echo "    php console serve 8080 0.0.0.0 → http://0.0.0.0:8080\n";
+        echo "\n";
+        break;
+}
