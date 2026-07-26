@@ -11,6 +11,6 @@
         }
     },
     "scripts": {
-        "serve": "php -S localhost:8080 -t public/"
+        "serve": "COMPOSER_PROCESS_TIMEOUT=0 php -S localhost:8080 -t public/"
     }
 }
