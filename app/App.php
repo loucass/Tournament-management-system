@@ -57,6 +57,32 @@ class App
         return strtotime($period);
     }
 
+    public static function csrf_token(): string
+    {
+        if (empty($_SESSION['_csrf_token'])) {
+            $_SESSION['_csrf_token'] = bin2hex(random_bytes(32));
+        }
+        return $_SESSION['_csrf_token'];
+    }
+
+    public static function csrf_field(): string
+    {
+        return '<input type="hidden" name="_csrf_token" value="' . static::csrf_token() . '">' . "\n";
+    }
+
+    public static function verify_csrf(): void
+    {
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+            return;
+        }
+        $token = $_POST['_csrf_token'] ?? '';
+        if (empty($token) || !hash_equals(static::csrf_token(), $token)) {
+            http_response_code(419);
+            echo View::make("404", ["errorPath" => "CSRF token validation failed"]);
+            exit();
+        }
+    }
+
     public function run()
     {
         try {

@@ -259,6 +259,7 @@
         <div class="form-container">
             <h1>add team Form</h1>
             <form method="post" id="searchForm">
+                <?= App\App::csrf_field() ?>
                 <div class="input-container">
                     <input type="text" id="user name" name="userName" required placeholder=" ">
                     <label for="user role">team name</label>

@@ -260,6 +260,7 @@
     <!-- Points Modal -->
     <div id="pointsModal" class="modal">
         <form method="POST" id="pointsModalForm">
+            <?= App\App::csrf_field() ?>
             <div class="modal-content">
                 <span class="close">&times;</span>
                 <h2>Update Points</h2>

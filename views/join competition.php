@@ -270,6 +270,7 @@
         <div class="form-container">
             <h1>join competition Form</h1>
             <form method="post">
+                <?= App\App::csrf_field() ?>
 
                 <div class="mb-3">
                     <input type="text" class="form-control" id="searchInput" placeholder="Search for competition..."

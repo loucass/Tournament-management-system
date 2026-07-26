@@ -64,6 +64,9 @@ $router
     ->get('/logout', [LogoutController::class, 'logout'])
 ;
 
+// Verify CSRF token on all POST requests
+App::verify_csrf();
+
 (
     new App(
         $router,

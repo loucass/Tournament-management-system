@@ -202,6 +202,7 @@
         <div class="form-container">
             <h1>add student Form</h1>
             <form method="post">
+                <?= App\App::csrf_field() ?>
                 <div class="input-container">
                     <input type="text" id="user name" name="userName" required placeholder=" ">
                     <label for="user role">user name</label>

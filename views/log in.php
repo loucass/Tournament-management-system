@@ -190,6 +190,7 @@
     <div class="login-container">
         <h1>Login</h1>
         <form method="post">
+            <?= App\App::csrf_field() ?>
 
             <div class="input-container">
                 <input type="email" id="user email" name="userEmail" required placeholder=" ">

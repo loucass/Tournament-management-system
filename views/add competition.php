@@ -202,6 +202,7 @@
         <div class="form-container">
             <h1>add competition Form</h1>
             <form method="post">
+                <?= App\App::csrf_field() ?>
                 <div class="input-container">
                     <input type="text" id="competition name" name="competitionName" required placeholder=" ">
                     <label for="competition role">competition name</label>
