@@ -36,6 +36,7 @@
                 </thead>
                 <tbody id="teamTable"></tbody>
             </table>
+            <div id="dashboardPagination" class="pagination" style="padding: 1rem;"></div>
         </div>
     </main>
 
@@ -56,6 +57,7 @@
 
     <script>
     const teams = JSON.parse('<?= $competitionsDetails ?>');
+    const pagination = JSON.parse('<?= $pagination ?? "null" ?>');
     const goldenSquare = document.getElementById('goldenSquare');
     const teamTable = document.getElementById('teamTable');
     const pointsModal = document.getElementById('pointsModal');
@@ -134,7 +136,41 @@
     };
     document.querySelector('.modal-close').onclick = () => pointsModal.style.display = 'none';
 
+    function renderDashboardPagination(pag) {
+        const container = document.getElementById('dashboardPagination');
+        if (!pag || pag.lastPage <= 1) { container.innerHTML = ''; return; }
+
+        let html = '<div class="flex flex-center" style="gap: 0.5rem;">';
+
+        if (pag.hasPrevious) {
+            html += `<a href="?competition=<?= urlencode($_GET['competition'] ?? '') ?>&category=<?= urlencode($_GET['category'] ?? '') ?>&page=${pag.previousPage}" class="btn btn-sm btn-secondary">&#8592; PREV</a>`;
+        } else {
+            html += `<span class="btn btn-sm btn-disabled">&#8592; PREV</span>`;
+        }
+
+        const start = Math.max(1, pag.currentPage - 2);
+        const end = Math.min(pag.lastPage, start + 4);
+        for (let i = start; i <= end; i++) {
+            if (i === pag.currentPage) {
+                html += `<span class="btn btn-sm btn-primary">${i}</span>`;
+            } else {
+                html += `<a href="?competition=<?= urlencode($_GET['competition'] ?? '') ?>&category=<?= urlencode($_GET['category'] ?? '') ?>&page=${i}" class="btn btn-sm btn-secondary">${i}</a>`;
+            }
+        }
+
+        if (pag.hasNext) {
+            html += `<a href="?competition=<?= urlencode($_GET['competition'] ?? '') ?>&category=<?= urlencode($_GET['category'] ?? '') ?>&page=${pag.nextPage}" class="btn btn-sm btn-secondary">NEXT &#8594;</a>`;
+        } else {
+            html += `<span class="btn btn-sm btn-disabled">NEXT &#8594;</span>`;
+        }
+
+        html += `<span style="font-size: 0.75rem; color: var(--text-muted); margin-left: 0.5rem;">${pag.total} total</span>`;
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
     renderTeams();
+    renderDashboardPagination(pagination);
     </script>
 </body>
 </html>
