@@ -13,11 +13,20 @@ class authenticateController
 
     public static function verify(bool $teacher = false)
     {
+        $token = $_COOKIE["JTK"] ?? '';
+        $role = $_COOKIE["role"] ?? '';
+
+        // Whitelist allowed roles to prevent SQL injection
+        $allowedRoles = ['teachers', 'users', 'teams', 'teams_participants'];
+        if (!in_array($role, $allowedRoles)) {
+            $role = '';
+        }
+
         if($teacher){
-            if($_COOKIE["JTK"] && $_COOKIE["role"] == "teachers"){
+            if($token && $role == "teachers"){
                 static::$db = App::db();
                 $st = static::$db->prepare("SELECT * FROM tokens WHERE token = ? AND role = 'teachers'");
-                $st->bindValue(1,$_COOKIE["JTK"]);
+                $st->bindValue(1, $token);
                 $st->execute();
         
                 $result = $st->fetchAll();
@@ -42,18 +51,18 @@ class authenticateController
             return false;
         }else{
             // if not teacher
-            if($_COOKIE["JTK"]){
+            if($token){
                 static::$db = App::db();
                 $st = static::$db->prepare("SELECT * FROM tokens WHERE token = ? AND role = ?");
-                $st->bindValue(1,$_COOKIE["JTK"]);
-                $st->bindValue(2,$_COOKIE["role"]);
+                $st->bindValue(1, $token);
+                $st->bindValue(2, $role);
                 $st->execute();
     
                 $result = $st->fetchAll();
                 
                 if(count($result)>0){
     
-                    $st = static::$db->prepare("SELECT * FROM " . $_COOKIE["role"] . " where ID = ?");
+                    $st = static::$db->prepare("SELECT * FROM " . $role . " where ID = ?");
                     $st->bindValue(1, $result[0]["userID"]);
                     $st->execute();
                     $result = $st->fetchAll();
@@ -62,7 +71,7 @@ class authenticateController
                         "ID"=>$result[0]["ID"],
                         "name"=>$result[0]["name"],
                         "email"=>$result[0]["email"],
-                        "role"=>$_COOKIE["role"]
+                        "role"=> $role
                         ];
                     return true;
                 }
@@ -85,8 +94,8 @@ class authenticateController
     }
     private static function getToken(): string
     {
-        $userAgent = $_SERVER["HTTP_USER_AGENT"];
-        $userIP = $_SERVER["REMOTE_ADDR"];
+        $userAgent = $_SERVER["HTTP_USER_AGENT"] ?? 'cli';
+        $userIP = $_SERVER["REMOTE_ADDR"] ?? '127.0.0.1';
         $token = bin2hex(random_bytes(64));
         $token = hash("sha256" , (string) $userAgent . $userIP . $token);
         return $token;
