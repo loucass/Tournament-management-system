@@ -6,52 +6,29 @@ namespace App;
 
 use App\Exceptions\RouteNotFoundException;
 
+/**
+ * App — Application kernel.
+ *
+ * Bootstraps the router and dispatches the request.  Config loading and
+ * database connection management have been delegated to the dedicated
+ * Config and Database services.
+ */
 class App
 {
-    private static \PDO $db;
-
     public function __construct(protected Router $router, protected array $request)
     {
-        $config = $this->loadConfig();
-        $dns = sprintf(
-            "mysql:host=%s;dbname=%s;charset=utf8mb4",
-            $config['DB_HOST'] ?? 'localhost',
-            $config['DB_DATABASE'] ?? 'task_2'
-        );
-        static::$db = new \PDO($dns, $config['DB_USER'] ?? 'root', $config['DB_PASS'] ?? '');
-        static::$db->setAttribute(\PDO::ATTR_ERRMODE , \PDO::ERRMODE_EXCEPTION);
-        static::$db->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE , \PDO::FETCH_ASSOC);
+        // Database is lazily initialised via Database::connect()
+        // Config is lazily loaded via Config::get()
     }
 
-    private function loadConfig(): array
+    public static function setCookies(string $name, string|array $value, string $period): int|false
     {
-        $envFile = dirname(__DIR__) . '/.env';
-        if (!file_exists($envFile)) {
-            return [];
-        }
-        $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        $config = [];
-        foreach ($lines as $line) {
-            $line = trim($line);
-            if ($line === '' || str_starts_with($line, '#')) {
-                continue;
-            }
-            if (str_contains($line, '=')) {
-                [$key, $value] = explode('=', $line, 2);
-                $config[trim($key)] = trim($value);
-            }
-        }
-        return $config;
-    }
-
-    public static function db(): \PDO
-    {
-        return static::$db;
-    }
-
-    public static function setCookies(string $name, string|array $value, string $period)
-    {
-        setcookie($name, $value, ["expires" => strtotime($period), "secure" => true, "httponly" => true, "samesite" => "none"]);
+        setcookie($name, $value, [
+            "expires" => strtotime($period),
+            "secure" => true,
+            "httponly" => true,
+            "samesite" => "none",
+        ]);
         return strtotime($period);
     }
 
@@ -81,14 +58,13 @@ class App
         }
     }
 
-    public function run()
+    public function run(): void
     {
         try {
             echo $this->router->resolve($this->request['uri'], strtolower($this->request['method']));
         } catch (RouteNotFoundException) {
-            $errorPath =  $this->request['uri'] . " " . strtolower($this->request['method']);
-            echo View::make("404" , ["errorPath" => $errorPath]);
+            $errorPath = $this->request['uri'] . " " . strtolower($this->request['method']);
+            echo View::make("404", ["errorPath" => $errorPath]);
         }
     }
-
 }
