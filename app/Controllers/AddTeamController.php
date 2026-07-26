@@ -44,23 +44,26 @@ class AddTeamController
             $st->execute([$teamName, $teamEmail, $hashedPassword]);
             $teamID = static::$db->lastInsertId();
 
-            // Assign selected students to the team
-            // Use SELECT ... FOR UPDATE to prevent race condition (TOCTOU)
+            // Assign selected students to the team with a single bulk query
             $studentNames = $_POST["students"] ?? [];
-            if (is_array($studentNames) && count($studentNames) > 0) {
-                foreach ($studentNames as $name) {
-                    $name = strtolower(trim($name));
+            if (!is_array($studentNames)) {
+                $studentNames = [];
+            }
+            
+            // Normalize and deduplicate names
+            $studentNames = array_unique(array_map(fn($n) => strtolower(trim($n)), $studentNames));
+            
+            if (count($studentNames) > 0) {
+                // Use bulk SELECT with FOR UPDATE for all students at once (prevents N+1 race conditions)
+                $placeholders = implode(',', array_fill(0, count($studentNames), '?'));
+                $st = static::$db->prepare("SELECT ID, name FROM users WHERE name IN ($placeholders) AND role = 'student' AND teamID IS NULL FOR UPDATE");
+                $st->execute(array_values($studentNames));
+                $availableStudents = $st->fetchAll();
 
-                    // Lock the row to prevent concurrent updates
-                    $st = static::$db->prepare("SELECT * FROM users WHERE name = ? AND role = 'student' AND teamID IS NULL FOR UPDATE");
-                    $st->execute([$name]);
-                    $student = $st->fetch();
-
-                    if ($student) {
-                        // Assign student to team
-                        $st = static::$db->prepare("UPDATE users SET teamID = ? WHERE ID = ?");
-                        $st->execute([$teamID, $student["ID"]]);
-                    }
+                // Assign all available students to the team
+                foreach ($availableStudents as $student) {
+                    $st = static::$db->prepare("UPDATE users SET teamID = ? WHERE ID = ?");
+                    $st->execute([$teamID, $student["ID"]]);
                 }
             }
 

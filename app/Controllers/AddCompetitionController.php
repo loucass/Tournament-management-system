@@ -22,31 +22,25 @@ class AddCompetitionController
             }
             static::$db = App::db();
 
-            static::$db->beginTransaction();
+            $competitionName = strtolower(trim($_POST["competitionName"] ?? ''));
+            $competitionCategory = strtolower(trim($_POST["competitionCategory"] ?? ''));
+
             $st = static::$db->prepare("SELECT * FROM competitions WHERE name = ?");
-            $st->bindValue(1 , strtolower(filter_input(INPUT_POST , "competitionName" , FILTER_SANITIZE_STRING)));
-            $st->execute();
-            $res = $st->fetchAll();
+            $st->execute([$competitionName]);
             
-            if(count($res) > 0){
-                echo View::make("add competition" , ["errorM" => "competition has already added"]);
+            if($st->fetch()){
+                echo View::make("add competition" , ["errorM" => "competition already exists"]);
                 return;
             }
             
-            $st = static::$db->prepare("INSERT INTO competitions VALUES(NULL , ? , ?)");
-            $st->bindValue(1 , strtolower(filter_input(INPUT_POST , "competitionName" , FILTER_SANITIZE_STRING)));
-            $st->bindValue(2 , strtolower(filter_input(INPUT_POST , "competitionCategory" , FILTER_SANITIZE_STRING)));
-            $st->execute();
+            $st = static::$db->prepare("INSERT INTO competitions (name, category) VALUES(?, ?)");
+            $st->execute([$competitionName, $competitionCategory]);
 
-            static::$db->commit();
             header("Location: /home");
             exit();
 
         }catch(\Exception $r){
-            static::$db->rollBack();
-
-            echo View::make("add competition" , ["errorM" => $r->getMessage()]);
-
+            echo View::make("add competition" , ["errorM" => "failed to add competition. please try again."]);
             return;
         }
     }
