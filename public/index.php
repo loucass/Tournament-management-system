@@ -32,7 +32,7 @@ header("Permissions-Policy: geolocation=(), microphone=(), camera=()");
 header_remove("X-Powered-By");
 
 // CORS headers
-header("Access-Control-Allow-Origin: http://localhost:3000");
+header("Access-Control-Allow-Origin: http://localhost:8080");
 header("Access-Control-Allow-Credentials: true");
 
 $router = new Router();
