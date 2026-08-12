@@ -36,7 +36,7 @@ class Paginator
         $this->total       = max(0, $total);
         $this->currentPage = max(1, $currentPage);
         $this->perPage     = max(1, $perPage);
-        $this->lastPage    = (int) ceil($this->total / $this->perPage);
+        $this->lastPage    = max(1, (int) ceil($this->total / $this->perPage));
         $this->offset      = ($this->currentPage - 1) * $this->perPage;
     }
 
