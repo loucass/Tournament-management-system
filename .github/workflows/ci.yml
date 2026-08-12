@@ -1,0 +1,134 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint & static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Syntax check (php -l)
+        run: composer lint:syntax
+
+      - name: Static analysis (PHPStan)
+        run: composer analyse
+
+  unit:
+    name: Unit tests (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.3', '8.4']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Run unit tests
+        run: composer test:unit
+
+  integration:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: task_2_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -proot"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_USER: root
+      DB_PASS: root
+      TEST_DB_DATABASE: task_2_test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          extensions: pdo, pdo_mysql
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Run integration tests
+        run: composer test:integration
+
+  smoke:
+    name: Build & smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Install production dependencies
+        run: composer install --no-interaction --prefer-dist --no-dev
+
+      - name: Boot server and probe routes
+        run: |
+          php -S 127.0.0.1:8080 -t public > /tmp/php-server.log 2>&1 &
+          SERVER_PID=$!
+          sleep 2
+
+          LOGIN_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/logIn)
+          SIGNUP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/signUp)
+          MISSING_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/does-not-exist)
+
+          kill $SERVER_PID 2>/dev/null || true
+
+          echo "GET /logIn        -> $LOGIN_CODE"
+          echo "GET /signUp       -> $SIGNUP_CODE"
+          echo "GET /does-not-exist -> $MISSING_CODE"
+
+          [ "$LOGIN_CODE" = "200" ] || { echo "FAIL: /logIn expected 200"; exit 1; }
+          [ "$SIGNUP_CODE" = "200" ] || { echo "FAIL: /signUp expected 200"; exit 1; }
+          [ "$MISSING_CODE" = "404" ] || { echo "FAIL: unknown route expected 404"; exit 1; }
+
+          echo "Smoke test passed."
