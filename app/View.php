@@ -6,7 +6,7 @@ namespace App;
 
 use App\Exceptions\ViewNotFoundException;
 
-class View
+final class View
 {
     public function __construct(
         protected string $view,
