@@ -56,5 +56,6 @@ CREATE TABLE IF NOT EXISTS competitions_points (
     participantID INT NOT NULL,
     competitionID INT NOT NULL,
     participantName VARCHAR(255) NOT NULL,
-    points INT NOT NULL DEFAULT 0
+    points INT NOT NULL DEFAULT 0,
+    UNIQUE KEY uk_participant_competition (participantID, competitionID)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
