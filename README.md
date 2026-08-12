@@ -8,6 +8,7 @@
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-7B3BE6?style=flat&logo=php&logoColor=white)](https://php.net)
 [![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?style=flat&logo=mysql&logoColor=white)](https://mysql.com)
 [![License](https://img.shields.io/badge/license-MIT-ff00aa?style=flat)](LICENSE)
+[![CI](https://github.com/loucass/Tournament-management-system/actions/workflows/ci.yml/badge.svg)](https://github.com/loucass/Tournament-management-system/actions/workflows/ci.yml)
 
 </div>
 
@@ -235,6 +236,32 @@ php -S localhost:8080 -t public/
 
 # Or via Composer
 composer serve
+```
+
+### Testing & CI
+
+| Gate | What runs |
+|------|-----------|
+| **Lint & analysis** | `php -l` syntax check on every file + PHPStan level 5 |
+| **Unit tests** | Router, Config, Paginator, View — no database needed (PHP 8.2/8.3/8.4) |
+| **Integration tests** | Real MySQL in a service container: migrations, seeding, auth tokens, application limits, scoring, team building |
+| **Smoke test** | Production install (`--no-dev`), boot the server, probe routes for 200/404 |
+
+Run the same checks locally:
+
+```bash
+composer install          # dev dependencies (phpunit, phpstan)
+composer check            # lint:syntax + analyse + test
+composer test:unit        # unit tests only (no DB required)
+composer test:integration # integration tests (requires local MySQL)
+```
+
+Integration tests build an isolated database (`task_2_test` by default) and
+skip cleanly when MySQL is unavailable. Configure your local DB with
+environment variables:
+
+```bash
+DB_HOST=127.0.0.1 DB_USER=root DB_PASS=secret composer test:integration
 ```
 
 ### Production Deployment
