@@ -1,0 +1,9 @@
+parameters:
+    level: 5
+    paths:
+        - app/
+        - console
+        - public/index.php
+    excludePaths:
+        - views/
+    tmpDir: .phpstan-cache
