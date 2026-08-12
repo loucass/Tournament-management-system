@@ -25,10 +25,11 @@ class ApplyingPolicyController
                 GROUP BY participantID
               ) direct_apps ON direct_apps.participantID = u.ID
               LEFT JOIN (
-                SELECT tp.teamID, COUNT(*) AS cnt 
+                SELECT tp.ID AS teamID, COUNT(*) AS cnt 
                 FROM competitions_applications ca
-                JOIN users tp ON tp.ID = ca.participantID AND tp.teamID IS NOT NULL
-                GROUP BY tp.teamID
+                JOIN teams tp ON tp.ID = ca.participantID
+                WHERE ca.category = 'teams'
+                GROUP BY tp.ID
               ) team_apps ON team_apps.teamID = u.teamID
               WHERE u.role = 'student'
               GROUP BY u.ID
@@ -66,10 +67,11 @@ class ApplyingPolicyController
                 GROUP BY participantID
               ) direct_apps ON direct_apps.participantID = u.ID
               LEFT JOIN (
-                SELECT tp.teamID, COUNT(*) AS cnt 
+                SELECT tp.ID AS teamID, COUNT(*) AS cnt 
                 FROM competitions_applications ca
-                JOIN users tp ON tp.ID = ca.participantID AND tp.teamID IS NOT NULL
-                GROUP BY tp.teamID
+                JOIN teams tp ON tp.ID = ca.participantID
+                WHERE ca.category = 'teams'
+                GROUP BY tp.ID
               ) team_apps ON team_apps.teamID = u.teamID
               WHERE u.ID = ?
               GROUP BY u.ID
